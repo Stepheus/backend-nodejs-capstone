@@ -51,7 +51,7 @@ router.post('/', upload.single("file"), async(req, res,next) => {
         let secondChanceItem = req.body;decode
         //update with an id of the last one plus one
         const lastItemQuery = await collection.find().sort({"id": -1}).limit(1);
-        await lastItemQuery.forEach(item => {
+        lastItemQuery.forEach(item => {
             secondChanceItem.id = (parseInt(item.id) + 1).toString();            
         });
 
@@ -77,7 +77,7 @@ router.get('/:id', async (req, res, next) => {
        const collection = db.collection(collectionName);
        
        const id = req.params.id;
-       const secondChanceItem = collection.findOne({"id": id });
+       const secondChanceItem = await collection.findOne({"id": id });
 
        if(!secondChanceItem){
         res.status(404).json("Ressource not found");
