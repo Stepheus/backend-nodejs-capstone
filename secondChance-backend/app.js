@@ -12,6 +12,14 @@ const app = express();
 app.use("*",cors());
 const port = 3060;
 
+//load data to databas
+console.log("Loading data to database");
+loadData().then(()=>{
+    pinoLogger.info('Loading data to DB');
+}).catch((error)=>{
+    console.error("Failed to load data to database");
+});
+
 // Connect to MongoDB; we just do this one time
 connectToDatabase().then(() => {
     pinoLogger.info('Connected to DB');
@@ -22,6 +30,8 @@ connectToDatabase().then(() => {
 app.use(express.json());
 
 // Route files
+const secondChanceItemsRoutes = require("./routes/secondChanceItemsRoutes");
+app.use("/api/secondchance/items", secondChanceItemsRoutes);
 
 // authRoutes Step 2: import the authRoutes and store in a constant called authRoutes
 //{{insert code here}}
