@@ -17,7 +17,7 @@ const { decode } = require('jsonwebtoken');
 
 
 //Error handler
-const {fileUploadError, FileUploadError} = require("./errors/custom_errors");
+const {FileUploadError} = require("./errors/custom_errors");
 
 //Database
 const collectionName = process.env.MONGO_COLLECTION;
@@ -47,8 +47,7 @@ router.get('/', async (req, res, next) => {
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        // fileSize: 1080 * 1080,   //5MB limit.
-        fileSize: 2 * 1020,   //2KB limit for test.
+        fileSize: 2 * 1024 * 1024,   //2MB
     },
 });
 
@@ -72,7 +71,8 @@ router.post('/', upload.single("file"), async(req, res,next) => {
         //Defense 1. Right to Left Override attack
         let originalName = req.file.originalname;
         if (originalName.includes("\u202E")){
-            throw new FileUploadError("Malicious hidden charactes detected in filename", {type: "Security Alert", file: originalName});
+            throw new FileUploadError("Malicious hidden charactes detected in filename", 
+                {type: "Security Alert", file: originalName});
         }
 
         //Defense 2. Check extension with magic byte
@@ -105,7 +105,8 @@ router.post('/', upload.single("file"), async(req, res,next) => {
         res.status(201).json(secondChanceItem.insertedId);
     } catch (e) {
         if (e instanceof FileUploadError){
-
+            
+            next(e);
         };
 
 
