@@ -1,30 +1,32 @@
 require("dotenv").config();
 
 const express = require('express');
+const router = express.Router();
+const connectToDatabase = require('../models/db');
+
+//upload tools
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const router = express.Router();
-const connectToDatabase = require('../models/db');
+const {fileTypeFromBuffer} = require("file-type");
+
+
 const logger = require('../logger');
 const { decode } = require('jsonwebtoken');
 
-// Define the upload directory path
-const directoryPath = 'public/images';
 
-// Set up storage for uploaded files
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, directoryPath); // Specify the upload directory
-  },
-  filename: function (req, file, cb) {
-    cb(null, file.originalname); // Use the original file name
-  },
-});
 
-const upload = multer({storage: storage});
+//Error handler
+const {fileUploadError, FileUploadError} = require("./errors/custom_errors");
 
+//Database
 const collectionName = process.env.MONGO_COLLECTION;
+
+// Define the upload directory path
+const directoryPath = path.join(__dirname,"..", 'public/images');
+if (!fs.existsSync(directoryPath)){
+    fs.mkdirSync(directoryPath);
+};
 
 
 // Get all secondChanceItems
@@ -41,19 +43,55 @@ router.get('/', async (req, res, next) => {
     }
 });
 
+//Upload settings for new items
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        // fileSize: 1080 * 1080,   //5MB limit.
+        fileSize: 2 * 1020,   //2KB limit for test.
+    },
+});
+
+const ALLOWED_TYPES = {
+    "image/jpeg": [".jpg", ".jpeg"],
+    "image/png": [".png"],
+    "application/pdf": [".pdf"],
+    "image/webp": [".webp"],
+};
+
+
 // Add a new item
 router.post('/', upload.single("file"), async(req, res,next) => {
     try {
+
+        //check file upload
+        if (!req.file){
+            throw new FileUploadError("No file uploaded", {type: "Missing file."});
+        }
+
+        //Defense 1. Right to Left Override attack
+        let originalName = req.file.originalname;
+        if (originalName.includes("\u202E")){
+            throw new FileUploadError("Malicious hidden charactes detected in filename", {type: "Security Alert", file: originalName});
+        }
+
+        //Defense 2. Check extension with magic byte
+
+        
+
         const db = await connectToDatabase();
         const collection = db.collection(collectionName);
  
         //create new second chance item
-        let secondChanceItem = req.body;decode
+        let secondChanceItem = req.body;
+        //Verify entries from request body
+
+
         //update with an id of the last one plus one
         const lastItemQuery = await collection.find().sort({"id": -1}).limit(1);
-        lastItemQuery.forEach(item => {
-            secondChanceItem.id = (parseInt(item.id) + 1).toString();            
-        });
+      
+        secondChanceItem.id = (parseInt(lastItemQuery.id) + 1).toString();            
+     
 
         //set current date in seconds to new item
         const date_added = Math.floor(new Date().getTime()/1000); 
@@ -66,13 +104,19 @@ router.post('/', upload.single("file"), async(req, res,next) => {
 
         res.status(201).json(secondChanceItem.insertedId);
     } catch (e) {
-        next(e);
+        if (e instanceof FileUploadError){
+
+        };
+
+
+
     }
 });
 
 // Get a single secondChanceItem by ID
 router.get('/:id', async (req, res, next) => {
     try {
+        logger.info("get one item called");
        const db = await connectToDatabase();
        const collection = db.collection(collectionName);
        
@@ -80,7 +124,7 @@ router.get('/:id', async (req, res, next) => {
        const secondChanceItem = await collection.findOne({"id": id });
 
        if(!secondChanceItem){
-        res.status(404).json("Ressource not found");
+        res.status(404).json("Resource not found");
        }
 
        res.status(200).json(secondChanceItem);
@@ -139,7 +183,7 @@ router.delete('/:id', async(req, res,next) => {
        const query = {"id": id};
 
        //find and delete item
-       const result = collection.deleteOne(query);
+       const result = await collection.deleteOne(query);
 
        if(result.deletedCount === 1){
         console.log("Successfully deleted one item.");

@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const pinoLogger = require('./logger');
+const multer = require("multer");
 
 const connectToDatabase = require('./models/db');
 const {loadData} = require("./util/import-mongo/index");
@@ -60,8 +61,23 @@ app.use(pinoHttp({ logger }));
 
 
 // Global Error Handler
+
+app.all("*", (req, res, next)=>{
+    const err = new Error(`Can find the URL ${req.originalUrl} in this application. Please check.`);
+    err.status = "Endpoint failure";
+    err.statusCode = 404;
+    next(err);
+
+})
 app.use((err, req, res, next) => {
-    console.error(err);
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({
+            error: 'File is too large. Maximum size allowed is 5MB.'
+        });
+        }
+  }
+
     res.status(500).send('Internal Server Error');
 });
 
