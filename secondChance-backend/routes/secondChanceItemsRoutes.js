@@ -17,7 +17,7 @@ const { decode } = require('jsonwebtoken');
 
 
 //Error handler
-const {FileUploadError} = require("./errors/custom_errors");
+const FileUploadError = require("./errors/custom_errors");
 
 //Database
 const collectionName = process.env.MONGO_COLLECTION;
@@ -61,6 +61,7 @@ const ALLOWED_TYPES = {
 
 // Add a new item
 router.post('/', upload.single("file"), async(req, res,next) => {
+    console.log("Inside Post file request");
     try {
 
         //check file upload
@@ -71,6 +72,7 @@ router.post('/', upload.single("file"), async(req, res,next) => {
         //Defense 1. Right to Left Override attack
         let originalName = req.file.originalname;
         if (originalName.includes("\u202E")){
+            console.error("Malicious file");
             throw new FileUploadError("Malicious hidden charactes detected in filename", 
                 {type: "Security Alert", file: originalName});
         }
@@ -103,14 +105,8 @@ router.post('/', upload.single("file"), async(req, res,next) => {
         console.log("Item Inserted: ", secondChanceItem);
 
         res.status(201).json(secondChanceItem.insertedId);
-    } catch (e) {
-        if (e instanceof FileUploadError){
-            
-            next(e);
-        };
-
-
-
+    } catch (e) {     
+        next(e);
     }
 });
 

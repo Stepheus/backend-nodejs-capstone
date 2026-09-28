@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const pinoLogger = require('./logger');
 const multer = require("multer");
+const FileUploadError = require("./routes/errors/custom_errors");
 
 const connectToDatabase = require('./models/db');
 const {loadData} = require("./util/import-mongo/index");
@@ -70,15 +71,23 @@ app.all("*", (req, res, next)=>{
 
 })
 app.use((err, req, res, next) => {
+
+    console.log(err.name);
+    console.log(err.message);
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
             error: 'File is too large. Maximum size allowed is 5MB.'
         });
         }
-  }
 
-    res.status(500).send('Internal Server Error');
+    } else if(err instanceof FileUploadError) {
+        console.error("File instance error.")
+        res.status(400).json({
+            error: err.message,
+        });
+
+    };
 });
 
 app.get("/",(req,res)=>{
