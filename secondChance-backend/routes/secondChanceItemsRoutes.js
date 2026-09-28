@@ -8,7 +8,7 @@ const connectToDatabase = require('../models/db');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const {fileTypeFromBuffer} = require("file-type");
+const { fileTypeFromBuffer } = require("file-type");
 
 
 const logger = require('../logger');
@@ -78,9 +78,15 @@ router.post('/', upload.single("file"), async(req, res,next) => {
         }
 
         //Defense 2. Check extension with magic byte
+        console.log("Getting the file true type.")
+        const trueType = await fileTypeFromBuffer(req.file.buffer);
+        if (!trueType || !ALLOWED_TYPES[trueType.mime]){
+            console.log({trueType});
+            throw new FileUploadError("Incorrect file type. Please upload a jpeg, png, or webp picture only.", {type: "Wrong file type.", file: originalName});
+        };
 
-        
 
+    
         const db = await connectToDatabase();
         const collection = db.collection(collectionName);
  
