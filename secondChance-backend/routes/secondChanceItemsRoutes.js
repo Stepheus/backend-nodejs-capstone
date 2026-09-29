@@ -1,3 +1,5 @@
+let DEBUG =    true;
+
 require("dotenv").config();
 
 const express = require('express');
@@ -9,6 +11,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { fileTypeFromBuffer } = require("file-type");
+
+//Image Sanitizer
+const sharp = require("sharp");
 
 
 const logger = require('../logger');
@@ -32,13 +37,19 @@ if (!fs.existsSync(directoryPath)){
 // Get all secondChanceItems
 router.get('/', async (req, res, next) => {
     logger.info('get all items, called');
+    if (DEBUG === true){
+        console.log("Get all items route called.")
+    };
     try {
         const db = await connectToDatabase();
         const collection = db.collection(collectionName);
         const secondChanceItems = await collection.find({}).toArray();
         res.json(secondChanceItems);
     } catch (e) {
-        logger.console.error('oops something went wrong', e)
+        logger.console.error('oops something went wrong', e);
+        if(DEBUG === true){
+            console.error("error getting all items", e);
+        };
         next(e);
     }
 });
@@ -72,45 +83,87 @@ router.post('/', upload.single("file"), async(req, res,next) => {
         //Defense 1. Right to Left Override attack
         let originalName = req.file.originalname;
         if (originalName.includes("\u202E")){
-            console.error("Malicious file");
+            if(DEBUG === true){
+                console.error("Malicious file");
+            };       
             throw new FileUploadError("Malicious hidden charactes detected in filename", 
-                {type: "Security Alert", file: originalName});
-        }
-
-        //Defense 2. Check extension with magic byte
-        console.log("Getting the file true type.")
-        const trueType = await fileTypeFromBuffer(req.file.buffer);
-        if (!trueType || !ALLOWED_TYPES[trueType.mime]){
-            console.log({trueType});
-            throw new FileUploadError("Incorrect file type. Please upload a jpeg, png, or webp picture only.", {type: "Wrong file type.", file: originalName});
+                {type: "Security Alert", fileName: originalName});
         };
 
+        //Defense 2. Check extension with magic byte
+        if(DEBUG === true){
+            console.log("Getting the file true type:");
+        };
+        
+        const trueType = await fileTypeFromBuffer(req.file.buffer);
+        if(DEBUG === true){
+                console.log({trueType});
+            }; 
+        if (!trueType || !ALLOWED_TYPES[trueType.mime]){
+            if(DEBUG === true){
+                console.error("True type is not accepted.");
+            };
+            throw new FileUploadError("Incorrect file type. Please upload a jpeg, png, or webp picture only.", 
+                {type: "Unaccepted file type.", fileName: originalName});
+        };
 
-    
-        const db = await connectToDatabase();
-        const collection = db.collection(collectionName);
+        //Defense 3. Cross check extension with mime
+        const clientExtension = path.extname(originalName).toLocaleLowerCase();
+        const allowedExtensionForMime = ALLOWED_TYPES[trueType.mime];
+        if(!allowedExtensionForMime.includes(clientExtension)){
+            if(DEBUG === true){
+                console.error("Mime type does not match extension");
+            };
+            throw new FileUploadError("File Extension does not match file content",
+                {type: "Cross Extension failure.",
+                fileName: originalName,
+                clientExtension: clientExtension,
+                }
+            );
+        };
+
+        //Defense 4. Sanitize and rebuild uploaded image
+        const safeFileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${clientExtension}`;
+        if(DEBUG){
+            console.log("Sanitizing file to be saved: \n",{safeFileName});
+        };
+        
+        const destinationPath = path.join(directoryPath, safeFileName);
+
+        //Defense 5. Sanitization and rebuilding of the file before upload
+        await sharp(req.file.buffer)
+            .resize(500,500, {fit:"cover"})
+            .timeout({seconds:5})
+            .toFormat("webp")
+            .webp({quality:80})
+            .toFile(destinationPath);
+
+        
+        //Add item to database
+        // const db = await connectToDatabase();
+        // const collection = db.collection(collectionName);
  
-        //create new second chance item
-        let secondChanceItem = req.body;
-        //Verify entries from request body
+        // //create new second chance item
+        // let secondChanceItem = req.body;
+        // //Verify entries from request body
 
 
-        //update with an id of the last one plus one
-        const lastItemQuery = await collection.find().sort({"id": -1}).limit(1);
+        // //update with an id of the last one plus one
+        // const lastItemQuery = await collection.find().sort({"id": -1}).limit(1);
       
-        secondChanceItem.id = (parseInt(lastItemQuery.id) + 1).toString();            
+        // secondChanceItem.id = (parseInt(lastItemQuery.id) + 1).toString();            
      
 
-        //set current date in seconds to new item
-        const date_added = Math.floor(new Date().getTime()/1000); 
-        secondChanceItem.date_added = date_added; 
+        // //set current date in seconds to new item
+        // const date_added = Math.floor(new Date().getTime()/1000); 
+        // secondChanceItem.date_added = date_added; 
 
-        //insert item in database
-        secondChanceItem = await collection.insertOne(secondChanceItem); 
+        // //insert item in database
+        // secondChanceItem = await collection.insertOne(secondChanceItem); 
 
-        console.log("Item Inserted: ", secondChanceItem);
+        // console.log("Item Inserted: ", secondChanceItem);
 
-        res.status(201).json(secondChanceItem.insertedId);
+        // res.status(201).json(secondChanceItem.insertedId);
     } catch (e) {     
         next(e);
     }

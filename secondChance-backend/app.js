@@ -72,7 +72,7 @@ app.all("*", (req, res, next)=>{
 })
 app.use((err, req, res, next) => {
 
-    console.log(err.name);
+    console.log(err);
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
@@ -86,7 +86,16 @@ app.use((err, req, res, next) => {
             error: err.message,
         });
 
+    }else if(err instanceof Error && /corrupt|unsupported|Vips|extract_area/i.test(err.message)) {
+        return res.status(400).json({
+            error: "The uploaded image file is invalid or corrupt. Please try again."
+        });
+    } else if(err){
+        return res.status(500).json({
+            error: "Oups..Something bad happened on the server side. Sorry, please try again.",
+        })
     };
+
 });
 
 app.get("/",(req,res)=>{
