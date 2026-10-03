@@ -1,16 +1,21 @@
 /*jshint esversion: 8 */
+const DEBUG = true;
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const pinoLogger = require('./logger');
 const multer = require("multer");
-const FileUploadError = require("./routes/errors/custom_errors");
+const {FileUploadError, ValidationError} = require("./routes/errors/custom_errors");
 
 const connectToDatabase = require('./models/db');
 const {loadData} = require("./util/import-mongo/index");
 
 
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+
 app.use("*",cors());
 const port = 3060;
 
@@ -27,9 +32,6 @@ connectToDatabase().then(() => {
     pinoLogger.info('Connected to DB');
 })
     .catch((e) => console.error('Failed to connect to DB', e));
-
-
-app.use(express.json());
 
 // Route files
 const secondChanceItemsRoutes = require("./routes/secondChanceItemsRoutes");
@@ -71,8 +73,19 @@ app.all("*", (req, res, next)=>{
 
 })
 app.use((err, req, res, next) => {
+    console.log("Inside error middleware handler");
+    const isErrNotEmpty = err && (err instanceof Error || Object.keys(err).length > 0 || err.message);
+    if(!isErrNotEmpty){
+        return next();
+    };
 
-    console.log(err);
+    if(DEBUG){
+        console.error({
+            Error: err.name,
+            Message: err.message,
+        });
+
+    }
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
@@ -90,9 +103,18 @@ app.use((err, req, res, next) => {
         return res.status(400).json({
             error: "The uploaded image file is invalid or corrupt. Please try again."
         });
-    } else if(err){
+    } else if(err instanceof ValidationError){
+        return res.status(400).json({
+            error: {message: err.message,
+                field: err.field,
+                value: err.value,
+            }
+        });
+
+    }
+    else if(err){
         return res.status(500).json({
-            error: "Oups..Something bad happened on the server side. Sorry, please try again.",
+            error: "Oups..Something terribly bad happened on the server side. Sorry, please try again.",
         })
     };
 

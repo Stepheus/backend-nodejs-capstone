@@ -11,9 +11,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { fileTypeFromBuffer } = require("file-type");
+const {body, validationResult} = require("express-validator");
 
 //Image Sanitizer
 const sharp = require("sharp");
+
 
 
 const logger = require('../logger');
@@ -22,7 +24,7 @@ const { decode } = require('jsonwebtoken');
 
 
 //Error handler
-const FileUploadError = require("./errors/custom_errors");
+const {FileUploadError, ValidationError} = require("./errors/custom_errors");
 
 //Database
 const collectionName = process.env.MONGO_COLLECTION;
@@ -37,7 +39,7 @@ if (!fs.existsSync(directoryPath)){
 // Get all secondChanceItems
 router.get('/', async (req, res, next) => {
     logger.info('get all items, called');
-    if (DEBUG === true){
+    if (DEBUG){
         console.log("Get all items route called.")
     };
     try {
@@ -47,7 +49,7 @@ router.get('/', async (req, res, next) => {
         res.json(secondChanceItems);
     } catch (e) {
         logger.console.error('oops something went wrong', e);
-        if(DEBUG === true){
+        if(DEBUG){
             console.error("error getting all items", e);
         };
         next(e);
@@ -71,19 +73,79 @@ const ALLOWED_TYPES = {
 
 
 // Add a new item
-router.post('/', upload.single("file"), async(req, res,next) => {
+router.post('/',upload.single("file"), [
+    //Stop resource exhaustion and xss attacks
+    body("name").trim()
+    .notEmpty().withMessage("Name is required.")
+    .isString().withMessage("Name must be a string.")
+    .isLength({min:3, max:30}).withMessage("Name must be between 3 and 30 characters please.")
+    .escape(), //for <script> and other malicious and malevolent characters
+
+    body("category").trim().notEmpty()
+    .isString().withMessage("Category must be letters and not empty.")
+    .isLength({min:4, max:20}).withMessage("Invalid category selected")
+    .isIn(["Living","Kitchen","Office","Bedroom","Bathroom"])
+    .withMessage("Invalid category selected.")
+    .escape("Malicious character detected."),
+
+    body("condition").trim().notEmpty()
+    .isString().withMessage("Condition must be a string, and not empty.")
+    .isLength({min:4, max:20}).withMessage("Invalid condition selected.")
+    .isIn(["New", "Like New", "Older"])
+    .withMessage("Invalid condition selected.")
+    .escape("Malicious character detected."),
+
+    //Need zipcodes check with isNumeric 
+    body("zipcode").trim().notEmpty().withMessage("Zipcode required.")
+    .isString().withMessage("Zipcode must be a string.")
+    .isPostalCode("US").withMessage("Zipcode must be a valid US code."),
+    
+    body("age_days").isInt({min: 0, max:2000}).withMessage("Age must be a valid integer between 0 and 2000"),
+
+    body("description").trim()
+    .isLength({min: 1, max:200}).withMessage("Description can exceed 200 words")
+    .isString().withMessage("Description must contain letters only please.")
+    .escape(), //for <script> and other malicious and malevolent characters   
+
+], async(req, res,next) => {
+    const errors = validationResult(req);
+    
+   
+    //test that fileupload error still works.
+    //test validations errors
+    //group them consoles 
+
+
     console.log("Inside Post file request");
     try {
 
-        //check file upload
+        
+        //FormData check
+        if(!errors.isEmpty()){
+        if(DEBUG){
+            let errorsMapped = errors.mapped();
+            console.log("Errors in the field values");
+            console.table(errorsMapped, ["path", "value", "msg"]);
+        };
+
+        //We return only the first error for frontend 
+        const firstError = errors.array()[0];
+        DEBUG && console.log({firstError});
+        const errorValidation = new ValidationError(firstError.msg, {field: firstError.path, value: firstError.value});
+        throw errorValidation; 
+        }
+
+
+        //File upload check
         if (!req.file){
             throw new FileUploadError("No file uploaded", {type: "Missing file."});
         }
 
         //Defense 1. Right to Left Override attack
         let originalName = req.file.originalname;
+        console.log("Original file name: ", originalName);
         if (originalName.includes("\u202E")){
-            if(DEBUG === true){
+            if(DEBUG){
                 console.error("Malicious file");
             };       
             throw new FileUploadError("Malicious hidden charactes detected in filename", 
@@ -91,16 +153,16 @@ router.post('/', upload.single("file"), async(req, res,next) => {
         };
 
         //Defense 2. Check extension with magic byte
-        if(DEBUG === true){
+        if(DEBUG){
             console.log("Getting the file true type:");
         };
         
         const trueType = await fileTypeFromBuffer(req.file.buffer);
-        if(DEBUG === true){
+        if(DEBUG){
                 console.log({trueType});
             }; 
         if (!trueType || !ALLOWED_TYPES[trueType.mime]){
-            if(DEBUG === true){
+            if(DEBUG){
                 console.error("True type is not accepted.");
             };
             throw new FileUploadError("Incorrect file type. Please upload a jpeg, png, or webp picture only.", 
@@ -111,8 +173,8 @@ router.post('/', upload.single("file"), async(req, res,next) => {
         const clientExtension = path.extname(originalName).toLocaleLowerCase();
         const allowedExtensionForMime = ALLOWED_TYPES[trueType.mime];
         if(!allowedExtensionForMime.includes(clientExtension)){
-            if(DEBUG === true){
-                console.error("Mime type does not match extension");
+            if(DEBUG){
+                console.error("Mime type does not match extension\n", {clientExtension, allowedExtensionForMime });
             };
             throw new FileUploadError("File Extension does not match file content",
                 {type: "Cross Extension failure.",
@@ -138,25 +200,34 @@ router.post('/', upload.single("file"), async(req, res,next) => {
             .webp({quality:80})
             .toFile(destinationPath);
 
-        
-        //Add item to database
-        // const db = await connectToDatabase();
-        // const collection = db.collection(collectionName);
+        res.status(201).json({success: "Image successfully added"});
+        if(DEBUG){
+            console.log("Image successfully processed and added");
+        }
+
+        //Add image location with safename in database
+
+       
+
+        const db = await connectToDatabase();
+        const collection = db.collection(collectionName);
  
-        // //create new second chance item
-        // let secondChanceItem = req.body;
-        // //Verify entries from request body
+        const {name, category, condition, zipcode, age_days, description,} = req.body;
+        secondChanceItem = {name, category, condition, zipcode, age_days, description};
+        secondChanceItem.image = destinationPath;
+        secondChanceItem.age_years = (age_days/365).toFixed(2);
+        secondChanceItem.comments = [];
 
 
-        // //update with an id of the last one plus one
-        // const lastItemQuery = await collection.find().sort({"id": -1}).limit(1);
+        //update with an id of the last one plus one
+        const lastItemQuery = await collection.find().sort({"id": -1}).limit(1);
       
-        // secondChanceItem.id = (parseInt(lastItemQuery.id) + 1).toString();            
+        secondChanceItem.id = (parseInt(lastItemQuery.id) + 1).toString();            
      
 
         // //set current date in seconds to new item
-        // const date_added = Math.floor(new Date().getTime()/1000); 
-        // secondChanceItem.date_added = date_added; 
+        const date_added = Math.floor(new Date().getTime()/1000); 
+        secondChanceItem.date_added = date_added; 
 
         // //insert item in database
         // secondChanceItem = await collection.insertOne(secondChanceItem); 
