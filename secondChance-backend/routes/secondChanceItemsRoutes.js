@@ -79,7 +79,8 @@ router.post('/',upload.single("file"), [
     .notEmpty().withMessage("Name is required.")
     .isString().withMessage("Name must be a string.")
     .isLength({min:3, max:30}).withMessage("Name must be between 3 and 30 characters please.")
-    .escape(), //for <script> and other malicious and malevolent characters
+    .not().matches(/[<>&"'\/]/)
+    .withMessage('Special characters like <, >, &, ", \', and / are not allowed'),
 
     body("category").trim().notEmpty()
     .isString().withMessage("Category must be letters and not empty.")
@@ -125,7 +126,7 @@ router.post('/',upload.single("file"), [
         if(DEBUG){
             let errorsMapped = errors.mapped();
             console.log("Errors in the field values");
-            console.table(errorsMapped, ["path", "value", "msg"]);
+            console.table(errorsMapped, ["value", "msg"]);
         };
 
         //We return only the first error for frontend 
