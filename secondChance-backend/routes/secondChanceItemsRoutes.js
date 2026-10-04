@@ -194,6 +194,7 @@ router.post('/',upload.single("file"), [
         };
         
         const destinationPath = path.join(directoryPath, safeFileName);
+        
 
         //Defense 5. Sanitization and rebuilding of the file before upload
         await sharp(req.file.buffer)
@@ -203,34 +204,34 @@ router.post('/',upload.single("file"), [
             .webp({quality:80})
             .toFile(destinationPath);
 
-        res.status(201).json({success: "Image successfully added"});
-        if(DEBUG){
-            console.log("Image successfully processed and added");
-        }
-
-        //Add image location with safename in database
-
+        DEBUG && console.log(`File sanitized successfully and saved in ${destinationPath}`);
        
-
         const db = await connectToDatabase();
+        console.assert(db, "Failed to connect to database.");
         const collection = db.collection(collectionName);
  
         const {name, category, condition, zipcode, age_days, description,} = req.body;
         secondChanceItem = {name, category, condition, zipcode, age_days, description};
+        DEBUG && console.log({secondChanceItem});
         secondChanceItem.image = destinationPath;
         secondChanceItem.age_years = (age_days/365).toFixed(2);
         secondChanceItem.comments = [];
+        DEBUG && console.log({secondChanceItem});
 
 
         //update with an id of the last one plus one
-        const lastItemQuery = await collection.find().sort({"id": -1}).limit(1);
+        const lastItemQuery = await collection.find().sort({"id": -1}).limit(1).toArray();
+        DEBUG && console.log({lastItemQuery});
+        DEBUG && console.assert(lastItemQuery, "Could not find the last item in the database");
       
-        secondChanceItem.id = (parseInt(lastItemQuery.id) + 1).toString();            
-     
+        secondChanceItem.id = (+lastItemQuery[0].id + 1) + "";  
 
+        
+       
         // //set current date in seconds to new item
         const date_added = Math.floor(new Date().getTime()/1000); 
         secondChanceItem.date_added = date_added; 
+        res.status(201).json({entry: secondChanceItem});
 
         // //insert item in database
         // secondChanceItem = await collection.insertOne(secondChanceItem); 
