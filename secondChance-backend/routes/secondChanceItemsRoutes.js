@@ -87,26 +87,28 @@ router.post('/',upload.single("file"), [
     .isLength({min:4, max:20}).withMessage("Invalid category selected")
     .isIn(["Living","Kitchen","Office","Bedroom","Bathroom"])
     .withMessage("Invalid category selected.")
-    .escape("Malicious character detected."),
+    .not().matches(/[<>&"'\/]/)
+    .withMessage('Special characters like <, >, &, ", \', and / are not allowed'),
 
     body("condition").trim().notEmpty()
     .isString().withMessage("Condition must be a string, and not empty.")
-    .isLength({min:4, max:20}).withMessage("Invalid condition selected.")
     .isIn(["New", "Like New", "Older"])
     .withMessage("Invalid condition selected.")
-    .escape("Malicious character detected."),
+    .not().matches(/[<>&"'\/]/)
+    .withMessage('Special characters like <, >, &, ", \', and / are not allowed'),
 
     //Need zipcodes check with isNumeric 
     body("zipcode").trim().notEmpty().withMessage("Zipcode required.")
     .isString().withMessage("Zipcode must be a string.")
     .isPostalCode("US").withMessage("Zipcode must be a valid US code."),
     
-    body("age_days").isInt({min: 0, max:2000}).withMessage("Age must be a valid integer between 0 and 2000"),
+    body("age_days").isInt({min: 0, max:10000}).withMessage("Age must be a valid integer between 0 and 10000"),
 
     body("description").trim()
-    .isLength({min: 1, max:200}).withMessage("Description can exceed 200 words")
-    .isString().withMessage("Description must contain letters only please.")
-    .escape(), //for <script> and other malicious and malevolent characters   
+    .isLength({min: 1, max:300}).withMessage("Description cannot exceed 300 characters.")
+    .isString().withMessage("Description must be a string.")
+    .not().matches(/[<>&"'\/]/)
+    .withMessage('Special characters like <, >, &, ", \', and / are not allowed'), //for <script> and other malicious and malevolent characters   
 
 ], async(req, res,next) => {
     const errors = validationResult(req);
@@ -126,13 +128,13 @@ router.post('/',upload.single("file"), [
         if(DEBUG){
             let errorsMapped = errors.mapped();
             console.log("Errors in the field values");
-            console.table(errorsMapped, ["value", "msg"]);
+            console.table(errorsMapped, ["msg"]);
         };
 
         //We return only the first error for frontend 
         const firstError = errors.array()[0];
         DEBUG && console.log({firstError});
-        const errorValidation = new ValidationError(firstError.msg, {field: firstError.path, value: firstError.value});
+        const errorValidation = new ValidationError(firstError.msg, {field: firstError.path});
         throw errorValidation; 
         }
 
@@ -149,7 +151,7 @@ router.post('/',upload.single("file"), [
             if(DEBUG){
                 console.error("Malicious file");
             };       
-            throw new FileUploadError("Malicious hidden charactes detected in filename", 
+            throw new FileUploadError("Malicious and vile character detected in filename", 
                 {type: "Security Alert", fileName: originalName});
         };
 
