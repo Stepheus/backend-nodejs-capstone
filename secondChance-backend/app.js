@@ -112,9 +112,9 @@ app.use((err, req, res, next) => {
         });
 
     }
-    else if(err){
+    else if(err instanceof Error){
         return res.status(500).json({
-            error: "Oups..Something terribly bad happened on the server side. Sorry, please try again.",
+            error: err.message,
         })
     };
 

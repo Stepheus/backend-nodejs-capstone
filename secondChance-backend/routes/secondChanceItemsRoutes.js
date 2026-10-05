@@ -231,14 +231,15 @@ router.post('/',upload.single("file"), [
         // //set current date in seconds to new item
         const date_added = Math.floor(new Date().getTime()/1000); 
         secondChanceItem.date_added = date_added; 
-        res.status(201).json({entry: secondChanceItem});
 
-        // //insert item in database
-        // secondChanceItem = await collection.insertOne(secondChanceItem); 
 
-        // console.log("Item Inserted: ", secondChanceItem);
+        //insert item in database
+        secondChanceItem = await collection.insertOne(secondChanceItem); 
 
-        // res.status(201).json(secondChanceItem.insertedId);
+        if(!secondChanceItem.acknowledged){
+            throw new Error("Item could not be added. Please try again");
+        }
+         res.status(201).json({entry: `New item inserted. Id ${secondChanceItem.insertedId}`});
     } catch (e) {     
         next(e);
     }
