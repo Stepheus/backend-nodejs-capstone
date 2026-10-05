@@ -11,7 +11,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { fileTypeFromBuffer } = require("file-type");
-const {body, validationResult} = require("express-validator");
+const {body, param, validationResult} = require("express-validator");
 
 //Image Sanitizer
 const sharp = require("sharp");
@@ -239,20 +239,39 @@ router.post('/',upload.single("file"), [
         if(!secondChanceItem.acknowledged){
             throw new Error("Item could not be added. Please try again");
         }
-         res.status(201).json({entry: `New item inserted. Id ${secondChanceItem.insertedId}`});
+         res.status(201).json({entry: `New item inserted. Id '${secondChanceItem.insertedId}'`});
     } catch (e) {     
         next(e);
     }
 });
 
+
 // Get a single secondChanceItem by ID
-router.get('/:id', async (req, res, next) => {
+//validate and sanitize request param
+const validateUserId = [
+    param("id").toInt()         //Sanitize
+    .isInt({min: 1, max: 1000})
+    .withMessage("Id must be a positive integer betwen 1 and 1000 please."),
+]
+
+
+router.get('/:id', validateUserId, async (req, res, next) => {
+    const error = validationResult(req);
+
     try {
+
+        if(!error.isEmpty()){
+            DEBUG && console.log(error.mapped())
+            throw new ValidationError(`${error.array()[0].msg}`);
+        };
+
         logger.info("get one item called");
+        DEBUG && console.log("Inside PUT id");
        const db = await connectToDatabase();
+       console.assert(db, "Could not connect to database");
        const collection = db.collection(collectionName);
        
-       const id = req.params.id;
+       const id = req.params.id + "";
        const secondChanceItem = await collection.findOne({"id": id });
 
        if(!secondChanceItem){
