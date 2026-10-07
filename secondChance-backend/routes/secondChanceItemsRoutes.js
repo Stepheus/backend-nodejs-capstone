@@ -71,9 +71,7 @@ const ALLOWED_TYPES = {
     "image/webp": [".webp"],
 };
 
-
-// Add a new item
-router.post('/',upload.single("file"), [
+const validateBody = [
     //Stop resource exhaustion and xss attacks
     body("name").trim()
     .notEmpty().withMessage("Name is required.")
@@ -102,15 +100,18 @@ router.post('/',upload.single("file"), [
     .isString().withMessage("Zipcode must be a string.")
     .isPostalCode("US").withMessage("Zipcode must be a valid US code."),
     
-    body("age_days").isInt({min: 0, max:10000}).withMessage("Age must be a valid integer between 0 and 10000"),
-
+    body("age_days").isInt({min: 0, max:10000}).withMessage("Age must be a valid integer between 0 and 10000")
+    .toInt(),
     body("description").trim()
     .isLength({min: 1, max:300}).withMessage("Description cannot exceed 300 characters.")
     .isString().withMessage("Description must be a string.")
     .not().matches(/[<>&"'\/]/)
     .withMessage('Special characters like <, >, &, ", \', and / are not allowed'), //for <script> and other malicious and malevolent characters   
 
-], async(req, res,next) => {
+]
+
+// Add a new item
+router.post('/',upload.single("file"), validateBody, async(req, res,next) => {
     const errors = validationResult(req);
     
    
@@ -193,9 +194,49 @@ router.post('/',upload.single("file"), [
             console.log("Sanitizing file to be saved: \n",{safeFileName});
         };
         
-        const destinationPath = path.join(directoryPath, safeFileName);
-        
+        //Defense 5 below to sanitize and rebuild image with Sharp package.
+        const destinationPath = path.join(__dirname,"..", 'public/images', safeFileName);
 
+        DEBUG && console.log(`File sanitized successfully and saved in ${destinationPath}`);
+       
+        const db = await connectToDatabase();
+        console.assert(db, "Failed to connect to database.");
+        const collection = db.collection(collectionName);
+        
+        //Add new item to database 
+        
+        const lastItemQuery = await collection.find().sort({"id": -1}).limit(1).toArray();
+        DEBUG && console.log({lastItemQuery});
+        DEBUG && console.assert(lastItemQuery, "Could not find the last item in the database");
+        const id = (+lastItemQuery[0].id + 1) + "";
+        const {name, category, condition, zipcode, age_days, description} = req.body;
+        const age_years = ((Math.trunc((age_days/365)*100))/100);
+        const date_added = Math.floor(new Date().getTime()/1000);
+        DEBUG && console.log({id}, {name}, {category}, {condition}, {zipcode}, {date_added}, {age_days}, {age_years}, {description});
+        const secondChanceItem = {
+            id,
+            name,
+            category,
+            condition,
+            zipcode, 
+            date_added,
+            age_days, 
+            age_years, 
+            description,
+            image: `/images/${safeFileName}`,
+            comments:[],};
+        
+    
+        DEBUG && console.log({secondChanceItem});
+
+        //insert item in database
+        const newItem = await collection.insertOne(secondChanceItem); 
+
+        if(!newItem.acknowledged){
+            throw new Error("Item could not be added. Please try again");
+        }
+
+        //Once data entry is succesfully added in the database
         //Defense 5. Sanitization and rebuilding of the file before upload
         await sharp(req.file.buffer)
             .resize(500,500, {fit:"cover"})
@@ -204,42 +245,8 @@ router.post('/',upload.single("file"), [
             .webp({quality:80})
             .toFile(destinationPath);
 
-        DEBUG && console.log(`File sanitized successfully and saved in ${destinationPath}`);
-       
-        const db = await connectToDatabase();
-        console.assert(db, "Failed to connect to database.");
-        const collection = db.collection(collectionName);
- 
-        const {name, category, condition, zipcode, age_days, description,} = req.body;
-        secondChanceItem = {name, category, condition, zipcode, age_days, description};
-        DEBUG && console.log({secondChanceItem});
-        secondChanceItem.image = destinationPath;
-        secondChanceItem.age_years = (age_days/365).toFixed(2);
-        secondChanceItem.comments = [];
-        DEBUG && console.log({secondChanceItem});
 
-
-        //update with an id of the last one plus one
-        const lastItemQuery = await collection.find().sort({"id": -1}).limit(1).toArray();
-        DEBUG && console.log({lastItemQuery});
-        DEBUG && console.assert(lastItemQuery, "Could not find the last item in the database");
-      
-        secondChanceItem.id = (+lastItemQuery[0].id + 1) + "";  
-
-        
-       
-        // //set current date in seconds to new item
-        const date_added = Math.floor(new Date().getTime()/1000); 
-        secondChanceItem.date_added = date_added; 
-
-
-        //insert item in database
-        secondChanceItem = await collection.insertOne(secondChanceItem); 
-
-        if(!secondChanceItem.acknowledged){
-            throw new Error("Item could not be added. Please try again");
-        }
-         res.status(201).json({entry: `New item inserted. Id '${secondChanceItem.insertedId}'`});
+         res.status(201).json({entry: `New item inserted. Id '${newItem.insertedId}'`});
     } catch (e) {     
         next(e);
     }
@@ -251,24 +258,24 @@ router.post('/',upload.single("file"), [
 const validateUserId = [
     param("id").toInt()         //Sanitize
     .isInt({min: 1, max: 1000})
-    .withMessage("Id must be a positive integer betwen 1 and 1000 please."),
-]
+    .withMessage("Id must be a positive integer betwen 1 and 1000."),
+];
+
 
 
 router.get('/:id', validateUserId, async (req, res, next) => {
     const error = validationResult(req);
-
     try {
 
         if(!error.isEmpty()){
-            DEBUG && console.log(error.mapped())
+            DEBUG && console.log(error.mapped());
             throw new ValidationError(`${error.array()[0].msg}`);
         };
 
         logger.info("get one item called");
         DEBUG && console.log("Inside PUT id");
        const db = await connectToDatabase();
-       console.assert(db, "Could not connect to database");
+       DEBUG && console.assert(db, "Could not connect to database");
        const collection = db.collection(collectionName);
        
        const id = req.params.id + "";
@@ -285,13 +292,39 @@ router.get('/:id', validateUserId, async (req, res, next) => {
     }
 });
 
+const validateBodytoUpdate = [
+    body("category").trim().notEmpty().withMessage("Category required.")
+    .isLength({min:4, max:20}).withMessage("Invalid category selected")
+    .isString().isIn(["Living","Kitchen","Office","Bedroom","Bathroom"])
+    .withMessage("Invalid Category selected")
+    .not().matches(/[<>&"'\/]/)
+    .withMessage('Special characters like <, >, &, ", \', and / are not allowed'),
+
+    body("condition").trim().notEmpty().withMessage("condition required")
+    .isString().withMessage("Condition must be a string, and not empty.")
+    .isIn(["New", "Like New", "Older"])
+    .withMessage("Invalid condition selected")
+    .not().matches(/[<>"'\/]/),
+
+    body("age_days").notEmpty().withMessage("Age days required.") 
+    .isInt({min: 0, max:10000}).withMessage("Age must be a valid integer between 0 and 10000.")
+    .toInt(),
+];
+
 // Update and existing item
-router.put('/:id', async(req, res,next) => {
+router.put('/:id', validateBodytoUpdate, validateUserId, async(req, res,next) => {
+    const error = validationResult(req);
     try {
+         if(!error.isEmpty()){
+            DEBUG && console.log(error.mapped());
+            throw new ValidationError(`${error.array()[0].msg}`);
+        };
+
         const db = await connectToDatabase();
+        DEBUG && console.assert(db, "Could not connect to database");
        const collection = db.collection(collectionName);
        
-       const id = req.params.id;
+       const id = req.params.id + "";
        const secondChanceItem = collection.findOne({"id": id });
 
        if(!secondChanceItem){
@@ -313,7 +346,8 @@ router.put('/:id', async(req, res,next) => {
         {returnDocument: "after"});
 
         if(updatedloveItem){
-          res.status(200).json({"uploded": "success"});  
+            DEBUG && console.log({updatedloveItem});
+          res.status(200).json({"uploaded": "success", newDocument: updatedloveItem});  
         } else {
             res.json({"uploaded": "failure"});
         };
