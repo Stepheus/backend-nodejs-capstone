@@ -358,26 +358,64 @@ router.put('/:id', validateBodytoUpdate, validateUserId, async(req, res,next) =>
     }
 });
 
+
+
 // Delete an existing item
-router.delete('/:id', async(req, res,next) => {
+router.delete('/:id', validateUserId, async(req, res,next) => {
+    const error = validationResult(req);
     try {
+            if(!error.isEmpty()){
+            DEBUG && console.log(error.mapped());
+            throw new ValidationError(`${error.array()[0].msg}`);
+        };
        const db = await connectToDatabase();
+       DEBUG && console.assert(db, "could not connect to database inside delete route.")
        const collection = db.collection(collectionName);
        
-       const id = req.params.id;
+       const id = req.params.id + "";
        const query = {"id": id};
+       DEBUG && console.log({query});
+
+
+       //find if value exist and delete picture from our hardware
+       const result = await collection.findOne(query);
+       DEBUG && console.log({result});
+       if(!result){
+        const notfoundError = new Error('Resource does not exist');
+        notfoundError.statusCode = 400;
+        throw notfoundError;
+       }
+
+       DEBUG && console.log({result});
+
+       const imgSource = result.image;
+
+       const destinationToDelete = path.join(__dirname, "..", "/public", imgSource);
+       DEBUG && console.log({destinationToDelete});
+
+       if(!fs.existsSync(destinationToDelete)){
+        DEBUG && console.error("could not find location to delete img");
+        const locationError = new Error("could not find location to delete img");
+        locationError.statusCode= 400;
+        throw locationError;
+       }
 
        //find and delete item
-       const result = await collection.deleteOne(query);
+       let deletedItem = await collection.deleteOne(query);
 
-       if(result.deletedCount === 1){
+       if(!deletedItem.deletedCount === 1){
         console.log("Successfully deleted one item.");
-        res.status(200).json({"deleted":"successfully"});
-       }else{
-        console.log("Resource not found");
-        logger.error("second chance item not found for deletion.");
-        res.status(404).json("Resource not found");
-       };
+        const databaseError = new Error('Something happened. Please try again');
+        databaseError.statusCode = 500;
+        throw databaseError;
+       }
+
+        fs.unlink(destinationToDelete, (errr)=> {
+            if (errr){
+                throw errr;
+            }
+        });
+        res.status(200).json({"deleted":" One item deleted successfully"});
 
 
     } catch (e) {

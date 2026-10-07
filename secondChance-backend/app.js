@@ -113,7 +113,7 @@ app.use((err, req, res, next) => {
 
     }
     else if(err instanceof Error){
-        return res.status(500).json({
+        return res.status(err.statusCode || 500).json({
             error: err.message,
         })
     };
