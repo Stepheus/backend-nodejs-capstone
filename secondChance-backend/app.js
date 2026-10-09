@@ -37,6 +37,9 @@ connectToDatabase().then(() => {
 const secondChanceItemsRoutes = require("./routes/secondChanceItemsRoutes");
 app.use("/api/secondchance/items", secondChanceItemsRoutes);
 
+//search routes
+const searchRoutes = require("./routes/searchRoutes");
+app.use("/api/secondchance/search", searchRoutes);
 // authRoutes Step 2: import the authRoutes and store in a constant called authRoutes
 //{{insert code here}}
 
@@ -105,10 +108,7 @@ app.use((err, req, res, next) => {
         });
     } else if(err instanceof ValidationError){
         return res.status(400).json({
-            error: {message: err.message,
-                field: err.field,
-                value: err.value,
-            }
+            error: {message: err.message }
         });
 
     }

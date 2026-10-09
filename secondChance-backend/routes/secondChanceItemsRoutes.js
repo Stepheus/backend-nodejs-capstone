@@ -1,4 +1,4 @@
-let DEBUG =    true;
+let DEBUG = true;
 
 require("dotenv").config();
 
@@ -86,7 +86,7 @@ const validateBody = [
     .isIn(["Living","Kitchen","Office","Bedroom","Bathroom"])
     .withMessage("Invalid category selected.")
     .not().matches(/[<>&"'\/]/)
-    .withMessage('Special characters like <, >, &, ", \', and / are not allowed'),
+    .withMessage('Special characters like <, >, &, ", \, and / are not allowed'),
 
     body("condition").trim().notEmpty()
     .isString().withMessage("Condition must be a string, and not empty.")
@@ -128,7 +128,7 @@ router.post('/',upload.single("file"), validateBody, async(req, res,next) => {
         if(!errors.isEmpty()){
         if(DEBUG){
             let errorsMapped = errors.mapped();
-            console.log("Errors in the field values");
+            console.log("Errors in the Post field values");
             console.table(errorsMapped, ["msg"]);
         };
 

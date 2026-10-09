@@ -1,38 +1,79 @@
+let DEBUG = true;
+
+require("dotenv").config();
+
+//database
+const collectionName = process.env.MONGO_COLLECTION;
+
 const express = require('express');
 const router = express.Router();
 const connectToDatabase = require('../models/db');
+const { query, validationResult, matchedData} = require("express-validator");
+const { ValidationError } = require("./errors/custom_errors");
+
+let searchQueryValidator = [
+    query("name").optional().trim()
+    .isLength({max:15}).withMessage("Name has to between 2 and 30 characters long.")
+    .not().matches(/[<>&"'\/]/)
+    .withMessage('Special characters like <, >, &, ", \, and / are not allowed')
+    ,
+
+    query("category").trim().optional()
+    .isIn(["Living","Kitchen","Office","Bedroom", "Bathroom"])
+    .withMessage("Invalid category selected."),
+
+    query("condition").trim().optional()
+    .isIn(["New","Like New","Older"])
+    .withMessage("Invalid condition selected."),
+
+    query("age_years").trim().optional()
+    .isInt({min: 0, max:10}).withMessage("Age has to be an integer between 0 and 300.")
+    .not().matches(/[<>&"'\/]/)
+    .withMessage('Special characters like <, >, &, ", \, and / are not allowed.')
+    .toInt(),
+]
 
 // Search for gifts
-router.get('/', async (req, res, next) => {
+router.get('/', searchQueryValidator, async (req, res, next) => {  
     try {
-        // Task 1: Connect to MongoDB using connectToDatabase database. Remember to use the await keyword and store the connection in `db`
-        // {{insert code here}}
+        const errors = validationResult(req);
+        if (!errors.isEmpty()){
+            if(DEBUG){
+                let errorsMapped = errors.mapped();
+                console.log("Error in the search field");
+                console.table(errorsMapped, ["msg"])
+             };
 
-        const collection = db.collection("gifts");
+        //We return only the first error for frontend 
+            const firstError = errors.array()[0];
+            DEBUG && console.log({firstError});
+            const errorValidation = new ValidationError(firstError.msg, {field: firstError.path});
+            throw errorValidation; 
+
+        }
+       
+        const db = await connectToDatabase();
+        const collection = db.collection(collectionName);
 
         // Initialize the query object
-        let query = {};
+        const {name, age_years, category, condition} = matchedData(req);
+        const query ={};
 
         // Add the name filter to the query if the name parameter is not empty
-        // if (/* {{insert code here}} */) {
-            query.name = { $regex: req.query.name, $options: "i" }; // Using regex for partial match, case-insensitive
-        // }
-
-        // Task 3: Add other filters to the query
-        if (req.query.category) {
-            // {{insert code here}}
+        if (name) {
+            query.name = { $regex: name, $options: "i" }; // Using regex for partial match, case-insensitive
         }
-        if (req.query.condition) {
-            // {{insert code here}} 
+        if (category) {
+            query.category = category;
         }
-        if (req.query.age_years) {
-            // {{insert code here}}
-            query.age_years = { $lte: parseInt(req.query.age_years) };
+        if (condition) {
+            query.condition = condition;
+        }
+        if (age_years) {
+            query.age_years = { $lte: age_years};
         }
 
-        // Task 4: Fetch filtered gifts using the find(query) method. Make sure to use await and store the result in the `gifts` constant
-        // {{insert code here here}}
-
+        const gifts = await collection.find(query).toArray();
         res.json(gifts);
     } catch (e) {
         next(e);
