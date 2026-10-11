@@ -63,12 +63,12 @@ app.post('/sentiment', validateQuery, async (req, res) => {
 
         console.log({sentence});
 
-        let feels = "neutral"
+        let feels = "neutral";
         const analysisResult = analyzer.getSentiment(sentence.split(' '));
 
         if(analysisResult > 0.1){
             feels = "positive";
-        }else if (analysisResult < 0.1){
+        }else if (analysisResult < 0){
             feels = "negative";
         }
 
