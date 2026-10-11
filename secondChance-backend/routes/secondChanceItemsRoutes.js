@@ -126,17 +126,17 @@ router.post('/',upload.single("file"), validateBody, async(req, res,next) => {
         
         //FormData check
         if(!errors.isEmpty()){
-        if(DEBUG){
-            let errorsMapped = errors.mapped();
-            console.log("Errors in the Post field values");
-            console.table(errorsMapped, ["msg"]);
-        };
+            if(DEBUG){
+                let errorsMapped = errors.mapped();
+                console.log("Errors in the Post field values");
+                console.table(errorsMapped, ["msg"]);
+            };
 
-        //We return only the first error for frontend 
-        const firstError = errors.array()[0];
-        DEBUG && console.log({firstError});
-        const errorValidation = new ValidationError(firstError.msg, {field: firstError.path});
-        throw errorValidation; 
+            //We return only the first error for frontend 
+            const firstError = errors.array()[0];
+            DEBUG && console.log({firstError});
+            const errorValidation = new ValidationError(firstError.msg, {field: firstError.path});
+            throw errorValidation; 
         }
 
 

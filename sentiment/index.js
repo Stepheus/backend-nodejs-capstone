@@ -1,30 +1,39 @@
+const DEBUG = true;
+
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const logger = require('./logger');
 const expressPino = require('express-pino-logger')({ logger });
-// Task 1: import the natural library
-const natural = {{insert code here}}
+
+const {body, validationResult, matchedData} = require("express-validator");
+
+//Sentiment analyzer
+const natural = require("natural");
+
+const { ValidationError } = require('../secondChance-backend/routes/errors/custom_errors');
+const app = express();
 
 // Task 2: initialize the express server
-{{insert code here}}
 const port = process.env.PORT || 3000;
 
+
 app.use(express.json());
+app.use(express.urlencoded({extended: true}));
 app.use(expressPino);
 
 // Define the sentiment analysis route
 // Task 3: create the POST /sentiment analysis
-app.{{insert method here}}('{{insert route here}}', async (req, res) => {
 
-    // Task 4: extract the sentence parameter
-    const { sentence } = {{insert code here}};
+validateBody = [
+    body("sentiment").trim().notEmpty().withMessage("Empty sentiment")
+    .isString().withMessage("Sentiment must be a string")
+    .not().matches(/[<>"'\/]/)
+    .withMessage('Special characters like <, > &, ", \ and / are not allowed')
+    .isLength({max: 500}).withMessage("Body must not be longer than 500 charaters")
+];
 
-
-    if (!sentence) {
-        logger.error('No sentence provided');
-        return res.status(400).json({ error: 'No sentence provided' });
-    }
+app.post('/sentiment', validateBody, async (req, res) => {
 
     // Initialize the sentiment analyzer with the Natural's PorterStemmer and "English" language
     const Analyzer = natural.SentimentAnalyzer;
@@ -33,22 +42,43 @@ app.{{insert method here}}('{{insert route here}}', async (req, res) => {
 
     // Perform sentiment analysis
     try {
-        const analysisResult = analyzer.getSentiment(sentence.split(' '));
 
-        let sentiment = "neutral";
+        const errors = validationResult(req);
+        if(!errors.isEmpty()){
+            if(DEBUG){
+                let errorMapped = errors.mapped();
+                console.log("Error in the sentiment analysis request");
+                console.table(errorMapped, ["msg"]);
+            };
 
-        // Task 5: set sentiment to negative or positive based on score rules
-        {{insert code here}}
+        const firstError = errors.array()[0];
+        DEBUG && console.log({firstError});
+        const errorValidation = new ValidationError (firstError.msg);
+        throw errorValidation;
+        };
 
-        // Logging the result
+        
+       
+        const {sentiment} = matchedData(req, {location: ["body"]});
+
+        console.log({sentiment});
+
+        let feels = "neutral"
+        const analysisResult = analyzer.getSentiment(sentiment.split(' '));
+
+        if(analysisResult > 0.1){
+            feels = "positive";
+        }else if (analysisResult < 0.1){
+            feels = "negative"
+        }
+
+        // // Logging the result
         logger.info(`Sentiment analysis result: ${analysisResult}`);
 
-        // Task 6: send a status code of 200 with both sentiment score and the sentiment txt in the format { sentimentScore: analysisResult, sentiment: sentiment }
-        {{insert code here}}
-    } catch (error) {
-        logger.error(`Error performing sentiment analysis: ${error}`);
-        // Task 7: if there is an error, return a HTTP code of 500 and the json {'message': 'Error performing sentiment analysis'}
-        {{insert code here}}
+        res.status(200).json({sentimentScore: analysisResult, sentiment: feels});
+    } catch (e) {
+        logger.error(`Error performing sentiment analysis: ${e}`);
+        res.status(e.statusCode || 500).json({error: e.message})
     }
 });
 

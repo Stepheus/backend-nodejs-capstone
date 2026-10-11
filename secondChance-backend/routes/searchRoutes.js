@@ -62,16 +62,16 @@ router.get('/', searchQueryValidator, async (req, res, next) => {
         // Add the name filter to the query if the name parameter is not empty
         if (name) {
             query.name = { $regex: name, $options: "i" }; // Using regex for partial match, case-insensitive
-        }
+        };
         if (category) {
             query.category = category;
-        }
+        };
         if (condition) {
             query.condition = condition;
-        }
+        };
         if (age_years) {
-            query.age_years = { $lte: age_years};
-        }
+        };
+        query.age_years = { $lte: age_years};
 
         const gifts = await collection.find(query).toArray();
         res.json(gifts);
