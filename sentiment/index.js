@@ -6,7 +6,7 @@ const axios = require('axios');
 const logger = require('./logger');
 const expressPino = require('express-pino-logger')({ logger });
 
-const {body, validationResult, matchedData} = require("express-validator");
+const {query, validationResult, matchedData} = require("express-validator");
 
 //Sentiment analyzer
 const natural = require("natural");
@@ -25,15 +25,15 @@ app.use(expressPino);
 // Define the sentiment analysis route
 // Task 3: create the POST /sentiment analysis
 
-validateBody = [
-    body("sentiment").trim().notEmpty().withMessage("Empty sentiment")
+validateQuery = [
+    query("sentence").trim().notEmpty().withMessage("Empty sentiment")
     .isString().withMessage("Sentiment must be a string")
     .not().matches(/[<>"'\/]/)
     .withMessage('Special characters like <, > &, ", \ and / are not allowed')
     .isLength({max: 500}).withMessage("Body must not be longer than 500 charaters")
 ];
 
-app.post('/sentiment', validateBody, async (req, res) => {
+app.post('/sentiment', validateQuery, async (req, res) => {
 
     // Initialize the sentiment analyzer with the Natural's PorterStemmer and "English" language
     const Analyzer = natural.SentimentAnalyzer;
@@ -59,17 +59,17 @@ app.post('/sentiment', validateBody, async (req, res) => {
 
         
        
-        const {sentiment} = matchedData(req, {location: ["body"]});
+        const {sentence} = matchedData(req, {location: ["query"]});
 
-        console.log({sentiment});
+        console.log({sentence});
 
         let feels = "neutral"
-        const analysisResult = analyzer.getSentiment(sentiment.split(' '));
+        const analysisResult = analyzer.getSentiment(sentence.split(' '));
 
         if(analysisResult > 0.1){
             feels = "positive";
         }else if (analysisResult < 0.1){
-            feels = "negative"
+            feels = "negative";
         }
 
         // // Logging the result
