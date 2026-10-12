@@ -1,25 +1,53 @@
-class FileUploadError extends Error {
-    constructor(message = "File upload error.", details = {}){
+class AppError extends Error {
+    constructor(message, statusCode){
         super(message);
-        this.name = "FileUploadError";
-        this.statusCode = 400;
-       
-        this.isOperational = true; //Not a system crash
-        Object.assign(this, details);
+        this.statusCode = statusCode;
+        this.isOperational = true;
 
+        Error.captureStackTrace(this, this.constructor);
+    };
+};
+
+class FileUploadError extends AppError {
+    constructor(message = "File upload error.", details = {}){
+        super(message, 400);
+        this.name = this.constructor.name;
+        Object.assign(this, details);
         //capture stack trace, but not the constr
     };
-}
+};
 
-class ValidationError extends Error {
+class ValidationError extends AppError {
     constructor(message = "Validation error.", details = {}){
-        super(message);
-        this.name = "ValidationError";
-        this.statusCode = 400;
-
-        this.isOperational = true; //Not a system crash
+        super(message, 400);
+        this.name = this.constructor.name;
         Object.assign(this, details);
     };
+};
+
+class UserAlreadyExistError extends AppError {
+    constructor(message = "User already exist", details={}){
+        super(message, 409);
+        this.name = this.constructor.name;
+        Object.assign(this, details);
+    };
+};
+
+class UserNotFound extends AppError {
+    constructor(message = "User not found", details={}){
+        super(message, 404);
+        this.name = this.constructor.name;
+        Object.assign(this, details);
+    }
 }
 
-module.exports = {FileUploadError, ValidationError};
+class AuthFailure extends AppError {
+    constructor(message = "Authorization failure", details={}){
+        super(message, 401);
+        this.name = this.constructor.name;
+        Object.assign(this, details);
+    }
+}
+
+
+module.exports = {FileUploadError, ValidationError, UserAlreadyExistError, UserNotFound, AuthFailure};

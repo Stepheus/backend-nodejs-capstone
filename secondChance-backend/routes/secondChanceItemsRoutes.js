@@ -5,6 +5,7 @@ require("dotenv").config();
 const express = require('express');
 const router = express.Router();
 const connectToDatabase = require('../models/db');
+const collectionName = process.env.MONGO_COLLECTION;
 
 //upload tools
 const multer = require('multer');
@@ -27,7 +28,6 @@ const { decode } = require('jsonwebtoken');
 const {FileUploadError, ValidationError} = require("./errors/custom_errors");
 
 //Database
-const collectionName = process.env.MONGO_COLLECTION;
 
 // Define the upload directory path
 const directoryPath = path.join(__dirname,"..", 'public/images');

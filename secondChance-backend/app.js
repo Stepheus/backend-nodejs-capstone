@@ -40,8 +40,12 @@ app.use("/api/secondchance/items", secondChanceItemsRoutes);
 //search routes
 const searchRoutes = require("./routes/searchRoutes");
 app.use("/api/secondchance/search", searchRoutes);
-// authRoutes Step 2: import the authRoutes and store in a constant called authRoutes
-//{{insert code here}}
+
+// authRoutes Step 2
+const authRoutes = require("./routes/authRoutes");
+app.use("/api/secondchance/authRoutes", authRoutes);
+
+
 
 // Items API Task 1: import the secondChanceItemsRoutes and store in a constant called secondChanceItemsRoutes
 //{{insert code here}}
