@@ -4,7 +4,7 @@ require("dotenv").config();
 const connectToDatabase = require("../models/db");
 const collectionName = process.env.MONGO_USERS;
 
-const {ValidationError, UserNotFound, UserAlreadyExistError} = require("./errors/custom_errors");
+const {ValidationError, UserNotFound, UserAlreadyExistError, AppError} = require("./errors/custom_errors");
 
 const express = require("express");
 const router = express.Router();
@@ -56,23 +56,39 @@ router.post("/register", validateBody, async (req, res, next)=>{
         const db = await connectToDatabase();
         const collection = db.collection(collectionName);
 
-        const {email, password} = matchedData(req, {location: ["body"]});
+        const {firstname, lastname, email, password} = matchedData(req, {location: ["body"]});
 
         const itemFound = await collection.findOne({email: email});
 
         if(itemFound){
-           throw  UserAlreadyExistError("An email associated with this user already exists.", {email: email});
+           throw new UserAlreadyExistError("An email associated with this user already exists.", {email: email});
 
         };
 
         //Encrypt password
 
-        const salt = bcrypt.genSalt(10);
-        const hashed = bcrypt.hash(password, salt);
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        DEBUG && console.log("Password hashed. Adding new user to database");
 
-        const newUser = {
-            email
-        }
+        const newUser = {firstname, lastname, email, password: hashedPassword};
+        DEBUG && console.log({newUser});
+
+        const newUserAdded = await collection.insertOne(newUser);
+        console.assert(newUserAdded.insertedId, "Failed to add new user to the database");
+        if(!newUserAdded.insertedId){
+            throw new AppError("Failed to add user to database", 500);
+        };
+
+        //test
+        res.status(500).json({newUserId: newUserAdded.insertedId});
+
+        //check what assigment want us to do once registered. Maybe just send us to login page
+
+
+        //create token with id an return it
+
+        
 
 
 

@@ -1,5 +1,5 @@
 class AppError extends Error {
-    constructor(message, statusCode){
+    constructor(message, statusCode= 500){
         super(message);
         this.statusCode = statusCode;
         this.isOperational = true;
@@ -50,4 +50,4 @@ class AuthFailure extends AppError {
 }
 
 
-module.exports = {FileUploadError, ValidationError, UserAlreadyExistError, UserNotFound, AuthFailure};
+module.exports = {FileUploadError, ValidationError, UserAlreadyExistError, UserNotFound, AuthFailure, AppError};
