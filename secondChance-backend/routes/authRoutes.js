@@ -13,7 +13,10 @@ const router = express.Router();
 const {body, validationResult, matchedData} = require("express-validator");
 
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const JWT_SECRET = process.env.JWT_SECRET;
 
+const logger = require("../logger");
 
 const validateBody = [
     body("firstname").trim().notEmpty().withMessage("Firstname required").isString().withMessage("Name must be a valid string.")
@@ -61,36 +64,38 @@ router.post("/register", validateBody, async (req, res, next)=>{
         const itemFound = await collection.findOne({email: email});
 
         if(itemFound){
+           logger.error('Email id already exists');
            throw new UserAlreadyExistError("An email associated with this user already exists.", {email: email});
+           
 
         };
 
-        //Encrypt password
+        
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         DEBUG && console.log("Password hashed. Adding new user to database");
 
-        const newUser = {firstname, lastname, email, password: hashedPassword};
-        DEBUG && console.log({newUser});
+        const futureUser = {firstname, lastname, email, password: hashedPassword, createdAt: new Date()};
+        DEBUG && console.log({futureUser});
 
-        const newUserAdded = await collection.insertOne(newUser);
-        console.assert(newUserAdded.insertedId, "Failed to add new user to the database");
-        if(!newUserAdded.insertedId){
+        const newUser = await collection.insertOne(futureUser);
+        console.assert(newUser.insertedId, "Failed to add new user to the database");
+        if(!newUser.insertedId){
             throw new AppError("Failed to add user to database", 500);
         };
 
-        //test
-        res.status(500).json({newUserId: newUserAdded.insertedId});
+        logger.info('User registered successfully');
 
-        //check what assigment want us to do once registered. Maybe just send us to login page
+         // token
+        const payload = {
+            user: {
+                id: newUser.insertedId,
+            }
+        }
+        const authToken = jwt.sign(payload, JWT_SECRET, {expiresIn: "1hr"});
 
-
-        //create token with id an return it
-
-        
-
-
+        res.status(201).json({authToken, email});
 
 
     } catch (e) {
