@@ -43,7 +43,7 @@ app.use("/api/secondchance/search", searchRoutes);
 
 // authRoutes Step 2
 const authRoutes = require("./routes/authRoutes");
-app.use("/api/secondchance/authRoutes", authRoutes);
+app.use("/api/auth", authRoutes);
 
 
 

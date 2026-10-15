@@ -19,12 +19,12 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const logger = require("../logger");
 
 const validateBody = [
-    body("firstname").trim().notEmpty().withMessage("Firstname required").isString().withMessage("Name must be a valid string.")
+    body("firstName").trim().notEmpty().withMessage("Firstname required").isString().withMessage("Name must be a valid string.")
     .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"'\/]/)
     .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
     .matches(/^\p{L}+$/u).withMessage("firstname's characters must be all letters"),
 
-    body("lastname").trim().notEmpty().withMessage("Lastname required").isString().withMessage("Name must be a valid string.")
+    body("lastName").trim().notEmpty().withMessage("Lastname required").isString().withMessage("Name must be a valid string.")
     .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"'\/]/)
     .withMessage('Special characters like <, >, & ," and / are not allowed')
     .matches(/^\p{L}+$/u).withMessage("lastname's characters must be all letters"),
@@ -59,7 +59,7 @@ router.post("/register", validateBody, async (req, res, next)=>{
         const db = await connectToDatabase();
         const collection = db.collection(collectionName);
 
-        const {firstname, lastname, email, password} = matchedData(req, {location: ["body"]});
+        const {firstName, lastName, email, password} = matchedData(req, {location: ["body"]});
 
         const itemFound = await collection.findOne({email: email});
 
@@ -76,7 +76,7 @@ router.post("/register", validateBody, async (req, res, next)=>{
         const hashedPassword = await bcrypt.hash(password, salt);
         DEBUG && console.log("Password hashed. Adding new user to database");
 
-        const futureUser = {firstname, lastname, email, password: hashedPassword, createdAt: new Date()};
+        const futureUser = {firstName, lastName, email, password: hashedPassword, createdAt: new Date()};
         DEBUG && console.log({futureUser});
 
         const newUser = await collection.insertOne(futureUser);
@@ -85,7 +85,6 @@ router.post("/register", validateBody, async (req, res, next)=>{
             throw new AppError("Failed to add user to database", 500);
         };
 
-        logger.info('User registered successfully');
 
          // token
         const payload = {
@@ -96,6 +95,8 @@ router.post("/register", validateBody, async (req, res, next)=>{
         const authToken = jwt.sign(payload, JWT_SECRET, {expiresIn: "1hr"});
 
         res.status(201).json({authToken, email});
+
+        logger.info('User registered successfully');
 
 
     } catch (e) {
