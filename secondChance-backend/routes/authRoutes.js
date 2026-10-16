@@ -4,7 +4,7 @@ require("dotenv").config();
 const connectToDatabase = require("../models/db");
 const collectionName = process.env.MONGO_USERS;
 
-const {ValidationError, UserNotFound, UserAlreadyExistError, AppError} = require("./errors/custom_errors");
+const {ValidationError, UserNotFound, UserAlreadyExistError, AuthFailure, AppError} = require("./errors/custom_errors");
 
 const express = require("express");
 const router = express.Router();
@@ -18,7 +18,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 const logger = require("../logger");
 
-const validateBody = [
+const validateRegisterBody = [
     body("firstName").trim().notEmpty().withMessage("Firstname required").isString().withMessage("Name must be a valid string.")
     .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"'\/]/)
     .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
@@ -31,7 +31,9 @@ const validateBody = [
 
     body("email").trim().notEmpty().withMessage("Email required.")
     .isEmail().withMessage("Must be a valid email.")
-    .isLength({max:55}).withMessage("Email address is too long"),
+    .isLength({max:55}).withMessage("Email address is too long")
+    .not().matches(/[<>&"'\/]/)
+    .withMessage("Special characters like <, >, &, ', '', and / are not allowed"),
     
     body("password").trim().notEmpty().withMessage("Password required")
     .isLength({min: 8, max:20}).withMessage("Password must be between 8 and 20 characters long")
@@ -44,7 +46,7 @@ const validateBody = [
 
 ];
 
-router.post("/register", validateBody, async (req, res, next)=>{
+router.post("/register", validateRegisterBody, async (req, res, next)=>{
 
     try {
         const validationErrors = validationResult(req);
@@ -104,5 +106,65 @@ router.post("/register", validateBody, async (req, res, next)=>{
     }
 
 });
+
+
+const validateLoginBody = [
+    body("email").trim().notEmpty().withMessage("Email Required.")
+    .not().matches(/[<>&"'\/]/)
+    .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
+    .isLength({max:55}).withMessage("Email address is too long")
+    .isEmail().withMessage("Must be a valid email "),
+
+    body("password").trim().notEmpty().withMessage("Password required.")
+    .isLength({max: 20}).withMessage("Error in the field"),
+
+
+]
+
+router.post("/login", validateLoginBody, async (req, res, next)=>{
+    try {
+         const validationErrors = validationResult(req);
+        if (!validationErrors.isEmpty()){
+            DEBUG && console.error("Validation error: \n", validationErrors.mapped());
+
+            const firstError = validationErrors.array()[0];
+            DEBUG && console.log({firstError});
+            throw new ValidationError(firstError.msg, {field: firstError.path});
+        };
+
+        const db = await connectToDatabase();
+        const collection = db.collection(collectionName);
+        
+        const {email, password} = matchedData(req);
+
+        //check email 
+        const user = await collection.findOne({email});
+        if(!user){
+            throw new UserNotFound("User does not exist.", {email});
+        }
+
+        //check password
+        const goodPassword = await bcrypt.compare(password, user.password);;
+        console.log({goodPassword});
+        if (!goodPassword){
+            throw new AuthFailure("Incorrect Password", {email});
+        }
+
+        //create token
+        const payload = {
+            user: {
+                id: user._id.toString(),
+            }
+        }
+        
+        const authToken = jwt.sign(payload, JWT_SECRET, {expiresIn: "1hr"});
+
+        res.status(201).json({authToken, email});
+
+    } catch (e) {
+        next(e)
+    }
+})
+
 
 module.exports = router;
