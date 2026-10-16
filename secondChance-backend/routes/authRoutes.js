@@ -147,8 +147,12 @@ router.post("/login", validateLoginBody, async (req, res, next)=>{
         const goodPassword = await bcrypt.compare(password, user.password);;
         console.log({goodPassword});
         if (!goodPassword){
+            logger.error("Passports do not match");
             throw new AuthFailure("Incorrect Password", {email});
         }
+
+        //user's info for future use
+        const userName = user.firstName;
 
         //create token
         const payload = {
@@ -159,12 +163,12 @@ router.post("/login", validateLoginBody, async (req, res, next)=>{
         
         const authToken = jwt.sign(payload, JWT_SECRET, {expiresIn: "1hr"});
 
-        res.status(201).json({authToken, email});
+        res.status(201).json({authToken, email, userName});
 
     } catch (e) {
         next(e)
     }
-})
+});
 
 
 module.exports = router;
