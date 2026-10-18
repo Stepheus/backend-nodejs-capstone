@@ -251,20 +251,15 @@ router.put("/update", validateUpdate, async(req, res, next)=>{
             throw new AuthFailure("Your token does not give you access to that resource.");
         }
 
-        res.status(200).json({emailId, tokenId});
+        //Edit new name in database
+        const updatedUser = await collection.findOneAndUpdate({email}, {$set: {firstName: name}}, {returnDocument: "after"});
+
+        res.status(200).json({updatedUser});
 
 
-  
-
-
-
-
-    //     userExist.updatedAt = new Date();
-
-
-    //     res.status(200).json({authToken});
         
     } catch (e) {
+        logger.error(e.message);
         next(e); 
     }
 });
