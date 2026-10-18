@@ -164,7 +164,9 @@ router.post("/login", validateLoginBody, async (req, res, next)=>{
         
         const authToken = jwt.sign(payload, JWT_SECRET, {expiresIn: "1hr"});
 
-        res.status(201).json({authToken, email, userName});
+        userEmail = email;
+
+        res.status(201).json({authToken, userEmail, userName});
 
     } catch (e) {
         next(e)
