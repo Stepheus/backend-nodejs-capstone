@@ -7,6 +7,7 @@ const cors = require('cors');
 const pinoLogger = require('./logger');
 const multer = require("multer");
 const {FileUploadError, ValidationError} = require("./routes/errors/custom_errors");
+const path = require("path")
 
 const connectToDatabase = require('./models/db');
 const {loadData} = require("./util/import-mongo/index");
@@ -15,6 +16,7 @@ const {loadData} = require("./util/import-mongo/index");
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
+app.use(express.static(path.join(__dirname, "public")));
 
 app.use("*",cors());
 const port = 3060;

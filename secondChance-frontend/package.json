@@ -40,5 +40,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "allowScripts": {
+    "core-js@3.34.0": true,
+    "core-js-pure@3.34.0": true,
+    "fsevents@2.3.3": true
   }
 }
