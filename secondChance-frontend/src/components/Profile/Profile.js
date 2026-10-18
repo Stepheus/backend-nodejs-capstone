@@ -69,7 +69,7 @@ const handleSubmit = async (e) => {
       headers: {
         "Authorization": `Bearer ${authtoken}`,
         "Content-Type": "application/json",
-        "Email": email,
+        "email": email,
       },
       body: JSON.stringify(payload),
     });

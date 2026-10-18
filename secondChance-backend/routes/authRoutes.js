@@ -10,7 +10,7 @@ const express = require("express");
 const router = express.Router();
 
 
-const {body, validationResult, matchedData} = require("express-validator");
+const {header, body, validationResult, matchedData} = require("express-validator");
 
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -33,7 +33,7 @@ const validateRegisterBody = [
     .isEmail().withMessage("Must be a valid email.")
     .isLength({max:55}).withMessage("Email address is too long")
     .not().matches(/[<>&"'\/]/)
-    .withMessage("Special characters like <, >, &, ', '', and / are not allowed"),
+    .withMessage("Special characters like <, >, &, ', '', and / are not allowed").normalizeEmail(),
     
     body("password").trim().notEmpty().withMessage("Password required")
     .isLength({min: 8, max:20}).withMessage("Password must be between 8 and 20 characters long")
@@ -61,7 +61,7 @@ router.post("/register", validateRegisterBody, async (req, res, next)=>{
         const db = await connectToDatabase();
         const collection = db.collection(collectionName);
 
-        const {firstName, lastName, email, password} = matchedData(req, {location: ["body"]});
+        const {firstName, lastName, email, password} = matchedData(req, {locations: ["body"]});
 
         const itemFound = await collection.findOne({email: email});
 
@@ -113,7 +113,8 @@ const validateLoginBody = [
     .not().matches(/[<>&"'\/]/)
     .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
     .isLength({max:55}).withMessage("Email address is too long")
-    .isEmail().withMessage("Must be a valid email "),
+    .isEmail().withMessage("Must be a valid email ")
+    .normalizeEmail(),
 
     body("password").trim().notEmpty().withMessage("Password required.")
     .isLength({max: 20}).withMessage("Error in the field"),
@@ -126,7 +127,7 @@ router.post("/login", validateLoginBody, async (req, res, next)=>{
          const validationErrors = validationResult(req);
         if (!validationErrors.isEmpty()){
             DEBUG && console.error("Validation error: \n", validationErrors.mapped());
-
+            logger.error('Validation errors in login request', validationErrors.array());
             const firstError = validationErrors.array()[0];
             DEBUG && console.log({firstError});
             throw new ValidationError(firstError.msg, {field: firstError.path});
@@ -135,7 +136,7 @@ router.post("/login", validateLoginBody, async (req, res, next)=>{
         const db = await connectToDatabase();
         const collection = db.collection(collectionName);
         
-        const {email, password} = matchedData(req);
+        const {email, password} = matchedData(req, {locations:["body"]});
 
         //check email 
         const user = await collection.findOne({email});
@@ -144,7 +145,7 @@ router.post("/login", validateLoginBody, async (req, res, next)=>{
         }
 
         //check password
-        const goodPassword = await bcrypt.compare(password, user.password);;
+        const goodPassword = await bcrypt.compare(password, user.password);
         console.log({goodPassword});
         if (!goodPassword){
             logger.error("Passports do not match");
@@ -167,6 +168,104 @@ router.post("/login", validateLoginBody, async (req, res, next)=>{
 
     } catch (e) {
         next(e)
+    }
+});
+
+validateUpdate = [
+    header("email").notEmpty().withMessage("Email required in the header")
+    .isLength({max:55}).withMessage("Email is too long. 55 characters maximum allowed.")
+    .not().matches(/[<>&"'\/]/)
+    .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
+    .isEmail().withMessage("Must be a valid email.").normalizeEmail(),
+
+    header("authorization").notEmpty().withMessage("authorization token must be included in the header")
+    .isLength({max:200}).withMessage("Token header can't have more than 110 characters.")
+    .custom((value)=>{
+        //Must start with Bearer
+        if(!value.startsWith("Bearer")){
+            logger.error("Token inside put isn't properly formatted.");
+            throw new AuthFailure("Auth token isn't formatted properly");
+        };
+
+        //check token
+        const token = value.split(" ")[1];
+        if(!token){
+            logger.error("Token missing in put req header");
+            throw new AuthFailure("Token missing from req header for update");
+        }
+        return true;
+    }),
+
+    //Only update first name 
+    body("name").trim().notEmpty().withMessage("Firstname required").isString().withMessage("Name must be a valid string.")
+    .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"'\/]/)
+    .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
+    .matches(/^\p{L}+$/u).withMessage("Name must contain only letters"),
+];
+
+router.put("/update", validateUpdate, async(req, res, next)=>{
+    
+    //test api by loging and using a token in a request header {"Authorization": "Bearer ${autoken}, "Content-Type": "application/json", "Email": email} along with body {name: newname}. 
+    // Test if we receive authorization sentence, and email.
+    
+    try {
+
+        const updateValidationErrors = validationResult(req);
+        if (!updateValidationErrors.isEmpty()){
+            logger.error("Validation error in update request",
+                updateValidationErrors.array()
+            );
+
+            throw new ValidationError(updateValidationErrors.array()[0].msg);
+        };
+
+        const {email, authorization} = matchedData(req, {locations: ["headers"]});
+
+        const {name} = matchedData(req, {locations: ["body"]});
+        logger.info("Update info sent from frontend:\n", {email, authorization, name});
+     
+        //Database connect
+        const db = await connectToDatabase();
+        if(!db){
+            logger.error("Failed to connect to database");
+            throw new AppError("Failed to connect to database");
+        }
+        const collection = db.collection(collectionName);
+
+        //check if it exist first
+        const userExist = await collection.findOne({email});
+
+        if(!userExist){
+            logger.error("Email for the put request does not exist", {email});
+            throw new UserNotFound("Email does not exist for put request");
+        };
+        
+        //check token id matches id of email
+        const emailId = userExist._id;
+
+        const authToken = authorization.split(" ")[1];
+        const tokenId = (jwt.verify(authToken, JWT_SECRET)).user.id;
+
+        if (String(emailId) !== String(tokenId)){
+            logger.error("Malicious resource access detected. Email does not match token", {authToken, email});
+            throw new AuthFailure("Your token does not give you access to that resource.");
+        }
+
+        res.status(200).json({emailId, tokenId});
+
+
+  
+
+
+
+
+    //     userExist.updatedAt = new Date();
+
+
+    //     res.status(200).json({authToken});
+        
+    } catch (e) {
+        next(e); 
     }
 });
 
