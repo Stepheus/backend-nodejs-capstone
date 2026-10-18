@@ -254,7 +254,15 @@ router.put("/update", validateUpdate, async(req, res, next)=>{
         //Edit new name in database
         const updatedUser = await collection.findOneAndUpdate({email}, {$set: {firstName: name}}, {returnDocument: "after"});
 
-        res.status(200).json({updatedUser});
+        const payload = {
+            user:{
+                id: updatedUser._id.toString(),
+            }
+        }
+
+        const newToken = jwt.sign(payload, JWT_SECRET, {expiresIn: "1hr"});
+
+        res.status(200).json({newToken});
 
 
         
