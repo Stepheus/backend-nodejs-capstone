@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {urlConfig} from '../../config';
@@ -7,8 +7,11 @@ function SearchPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [ageRange, setAgeRange] = useState(6); // Initialize with minimum value
     const [searchResults, setSearchResults] = useState([]);
-    const categories = ['Living', 'Bedroom', 'Bathroom', 'Kitchen', 'Office'];
+    const categories = ['Living Room', 'Bedroom', 'Bathroom', 'Kitchen', 'Office'];
     const conditions = ['New', 'Like New', 'Older'];
+
+    const categoryRef = useRef(null);
+    const conditionRef = useRef(null);
 
     useEffect(() => {
         // fetch all products
@@ -38,8 +41,8 @@ function SearchPage() {
         const queryParams = new URLSearchParams({
             name: searchQuery,
             age_years: ageRange,
-            category: document.getElementById('categorySelect').value,
-            condition: document.getElementById('conditionSelect').value,
+            category: categoryRef.current.value,
+            condition: conditionRef.current.value,
         }).toString();
 
         try {
@@ -48,6 +51,7 @@ function SearchPage() {
                 throw new Error('Search failed');
             }
             const data = await response.json();
+            console.log("search data: ", data);
             setSearchResults(data);
         } catch (error) {
             console.error('Failed to fetch search results:', error);
@@ -72,8 +76,8 @@ function SearchPage() {
                         <div className="d-flex flex-column">
                             {/* Category Dropdown */}
                             <label htmlFor="categorySelect">Category</label>
-                            <select id="categorySelect" className="form-control my-1">
-                                <option value="">All</option>
+                            <select id="categorySelect" className="form-control my-1" ref={categoryRef}>
+                                <option value="All">All</option>
                                 {categories.map(category => (
                                     <option key={category} value={category}>{category}</option>
                                 ))}
@@ -81,8 +85,8 @@ function SearchPage() {
 
                             {/* Condition Dropdown */}
                             <label htmlFor="conditionSelect">Condition</label>
-                            <select id="conditionSelect" className="form-control my-1">
-                                <option value="">All</option>
+                            <select id="conditionSelect" className="form-control my-1" ref={conditionRef}>
+                                <option value="All">All</option>
                                 {conditions.map(condition => (
                                     <option key={condition} value={condition}>{condition}</option>
                                 ))}

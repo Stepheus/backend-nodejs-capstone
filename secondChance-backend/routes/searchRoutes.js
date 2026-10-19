@@ -10,6 +10,7 @@ const router = express.Router();
 const connectToDatabase = require('../models/db');
 const { query, validationResult, matchedData} = require("express-validator");
 const { ValidationError } = require("./errors/custom_errors");
+const logger = require("../logger");
 
 let searchQueryValidator = [
     query("name").optional().trim()
@@ -19,11 +20,11 @@ let searchQueryValidator = [
     ,
 
     query("category").trim().optional()
-    .isIn(["Living","Kitchen","Office","Bedroom", "Bathroom"])
+    .isIn(["Living Room","Kitchen","Office","Bedroom", "Bathroom", "All"])
     .withMessage("Invalid category selected."),
 
     query("condition").trim().optional()
-    .isIn(["New","Like New","Older"])
+    .isIn(["New","Like New","Older", "All"])
     .withMessage("Invalid condition selected."),
 
     query("age_years").trim().optional()
@@ -35,6 +36,7 @@ let searchQueryValidator = [
 
 // Search for gifts
 router.get('/', searchQueryValidator, async (req, res, next) => {  
+    logger.info("Search route reached");
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()){
@@ -57,24 +59,28 @@ router.get('/', searchQueryValidator, async (req, res, next) => {
 
         // Initialize the query object
         const {name, age_years, category, condition} = matchedData(req);
+        console.log("search parameter: \n", {name, age_years, category, condition});
         const query ={};
-
         // Add the name filter to the query if the name parameter is not empty
         if (name) {
             query.name = { $regex: name, $options: "i" }; // Using regex for partial match, case-insensitive
         };
-        if (category) {
+        if (category && category!== "All") {
             query.category = category;
         };
-        if (condition) {
+        if (condition && condition !== "All") {
+           
             query.condition = condition;
         };
         if (age_years) {
         };
         query.age_years = { $lte: age_years};
 
-        const gifts = await collection.find(query).toArray();
-        res.json(gifts);
+        console.log("searching for items matching these values: \n", query);
+
+        let gifts = await collection.find(query).toArray();
+        console.log({gifts});
+        res.status(200).json(gifts);
     } catch (e) {
         next(e);
     }
