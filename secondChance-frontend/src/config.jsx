@@ -1,6 +1,6 @@
 
 const config = {
-  backendUrl: window._env_?.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL,
+  backendUrl: window._env_?.VITE_API_URL || import.meta.env.VITE_API_URL,
 };
 
 console.log(`backendUrl in config.js: ${config.backendUrl}`)
