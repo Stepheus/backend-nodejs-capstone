@@ -77,7 +77,7 @@ const validateBody = [
     .notEmpty().withMessage("Name is required.")
     .isString().withMessage("Name must be a string.")
     .isLength({min:3, max:30}).withMessage("Name must be between 3 and 30 characters please.")
-    .not().matches(/[<>&"'\/]/)
+    .not().matches(/[<>&"'/]/)
     .withMessage('Special characters like <, >, &, ", \', and / are not allowed'),
 
     body("category").trim().notEmpty()
@@ -85,14 +85,14 @@ const validateBody = [
     .isLength({min:4, max:20}).withMessage("Invalid category selected")
     .isIn(["Living","Kitchen","Office","Bedroom","Bathroom"])
     .withMessage("Invalid category selected.")
-    .not().matches(/[<>&"'\/]/)
+    .not().matches(/[<>&"'/]/)
     .withMessage('Special characters like <, >, &, ", \, and / are not allowed'),
 
     body("condition").trim().notEmpty()
     .isString().withMessage("Condition must be a string, and not empty.")
     .isIn(["New", "Like New", "Older"])
     .withMessage("Invalid condition selected.")
-    .not().matches(/[<>&"'\/]/)
+    .not().matches(/[<>&"'/]/)
     .withMessage('Special characters like <, >, &, ", \', and / are not allowed'),
 
     //Need zipcodes check with isNumeric 
@@ -105,7 +105,7 @@ const validateBody = [
     body("description").trim()
     .isLength({min: 1, max:300}).withMessage("Description cannot exceed 300 characters.")
     .isString().withMessage("Description must be a string.")
-    .not().matches(/[<>&"'\/]/)
+    .not().matches(/[<>&"'/]/)
     .withMessage('Special characters like <, >, &, ", \', and / are not allowed'), //for <script> and other malicious and malevolent characters   
 
 ]
@@ -297,14 +297,14 @@ const validateBodytoUpdate = [
     .isLength({min:4, max:20}).withMessage("Invalid category selected")
     .isString().isIn(["Living","Kitchen","Office","Bedroom","Bathroom"])
     .withMessage("Invalid Category selected")
-    .not().matches(/[<>&"'\/]/)
+    .not().matches(/[<>&"'/]/)
     .withMessage('Special characters like <, >, &, ", \', and / are not allowed'),
 
     body("condition").trim().notEmpty().withMessage("condition required")
     .isString().withMessage("Condition must be a string, and not empty.")
     .isIn(["New", "Like New", "Older"])
     .withMessage("Invalid condition selected")
-    .not().matches(/[<>"'\/]/),
+    .not().matches(/[<>"'/]/),
 
     body("age_days").notEmpty().withMessage("Age days required.") 
     .isInt({min: 0, max:10000}).withMessage("Age must be a valid integer between 0 and 10000.")

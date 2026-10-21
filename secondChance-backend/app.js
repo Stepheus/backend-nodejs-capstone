@@ -26,7 +26,7 @@ console.log("Loading data to database");
 loadData().then(()=>{
     pinoLogger.info('Loading data to DB');
 }).catch((error)=>{
-    console.error("Failed to load data to database");
+    console.error("Failed to load data to database", error);
 });
 
 // Connect to MongoDB; we just do this one time

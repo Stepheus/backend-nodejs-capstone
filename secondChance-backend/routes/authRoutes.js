@@ -20,19 +20,19 @@ const logger = require("../logger");
 
 const validateRegisterBody = [
     body("firstName").trim().notEmpty().withMessage("Firstname required").isString().withMessage("Name must be a valid string.")
-    .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"'\/]/)
+    .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"/]/)
     .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
     .matches(/^\p{L}+$/u).withMessage("firstname's characters must be all letters"),
 
     body("lastName").trim().notEmpty().withMessage("Lastname required").isString().withMessage("Name must be a valid string.")
-    .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"'\/]/)
+    .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"'/]/)
     .withMessage('Special characters like <, >, & ," and / are not allowed')
     .matches(/^\p{L}+$/u).withMessage("lastname's characters must be all letters"),
 
     body("email").trim().notEmpty().withMessage("Email required.")
     .isEmail().withMessage("Must be a valid email.")
     .isLength({max:55}).withMessage("Email address is too long")
-    .not().matches(/[<>&"'\/]/)
+    .not().matches(/[<>&"'/]/)
     .withMessage("Special characters like <, >, &, ', '', and / are not allowed").normalizeEmail(),
     
     body("password").trim().notEmpty().withMessage("Password required")

@@ -15,7 +15,7 @@ const logger = require("../logger");
 let searchQueryValidator = [
     query("name").optional().trim()
     .isLength({max:15}).withMessage("Name has to between 2 and 30 characters long.")
-    .not().matches(/[<>&"'\/]/)
+    .not().matches(/[<>&"'/]/)
     .withMessage('Special characters like <, >, &, ", \, and / are not allowed')
     ,
 
@@ -29,7 +29,7 @@ let searchQueryValidator = [
 
     query("age_years").trim().optional()
     .isInt({min: 0, max:10}).withMessage("Age has to be an integer between 0 and 300.")
-    .not().matches(/[<>&"'\/]/)
+    .not().matches(/[<>&"'/]/)
     .withMessage('Special characters like <, >, &, ", \, and / are not allowed.')
     .toInt(),
 ]
