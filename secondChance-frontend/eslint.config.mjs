@@ -13,6 +13,12 @@ export default defineConfig([
       "vite.config.js" // Optional: ignore configuration files if desired
     ]
   },
-  { files: ["**/*.{js,mjs,cjs,jsx}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.browser } },
+  { files: ["**/*.{js,mjs,cjs,jsx}"], 
+    plugins: { js }, 
+    extends: ["js/recommended"], 
+    languageOptions: { 
+      globals: globals.node,
+
+     } },
   pluginReact.configs.flat.recommended,
 ]);

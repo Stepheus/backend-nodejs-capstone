@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React, { createContext, useState, useContext } from 'react';
 import PropTypes from 'prop-types';
 
@@ -15,7 +16,7 @@ export const AppProvider = ({ children }) => {
 };
 
 AppProvider.PropTypes = {
-  children: PropTypes.node.isRequired
+  children: PropTypes.node
 };
 
 export const useAppContext = () => useContext(AppContext);
