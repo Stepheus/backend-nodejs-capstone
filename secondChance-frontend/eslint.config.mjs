@@ -17,7 +17,7 @@ export default defineConfig([
     plugins: { js }, 
     extends: ["js/recommended"], 
     languageOptions: { 
-      globals: globals.node,
+      globals: globals.browser,
 
      } },
   pluginReact.configs.flat.recommended,
