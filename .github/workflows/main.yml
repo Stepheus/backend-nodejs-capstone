@@ -1,0 +1,49 @@
+name: Lint and Build JavaScript
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint-and-build:
+    name: lint code and Test build
+    runs-on: ubuntu-latest
+
+    steps:
+          - name: Checkout repository #copy repo
+            uses: actions/checkout@v4
+            
+          - name: Setup Node js       # set up node
+            uses: actions/setup-node@24
+            with:
+              node-version: "24"
+              cache: "npm"
+
+          #Lint the Backend with the configs already installed on it
+          - name: Install & Lint Backend
+            run: |
+              cd secondChance-backend
+              npm ci
+              npm run lint
+              echo "Backend codes linted successfully"
+
+          #Lint the Frontend with configs also already installed
+          - name: Install & Lint Frontend
+            run: |
+              cd secondChance-frontend
+              npm ci
+              npm run lint
+              echo "Frontend codes linted successfully"
+
+          #Build test for react frontend
+          - name: Test frontend production build
+            env:
+              CI: false   #prevents warnings from crashing the build
+            run: |
+              cd secondChance-frontend
+              npm run build
+              echo "Client-side built properly"
+
+          
