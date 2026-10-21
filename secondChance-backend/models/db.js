@@ -5,7 +5,7 @@ const MongoClient = require('mongodb').MongoClient;
 // MongoDB connection URL with authentication options
 let url = `${process.env.MONGO_URL}`;
 
-let dbInstance = null;
+// let dbInstance = null;
 const dbName = `${process.env.MONGO_DB}`;
 
 async function connectToDatabase() {

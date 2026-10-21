@@ -110,8 +110,8 @@ router.post("/register", validateRegisterBody, async (req, res, next)=>{
 
 const validateLoginBody = [
     body("email").trim().notEmpty().withMessage("Email Required.")
-    .not().matches(/[<>&"'\/]/)
-    .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
+    .not().matches(/[<>&"'/]/)
+    .withMessage("Special characters like <, >, &, ', and / are not allowed")
     .isLength({max:55}).withMessage("Email address is too long")
     .isEmail().withMessage("Must be a valid email ")
     .normalizeEmail(),
@@ -164,7 +164,7 @@ router.post("/login", validateLoginBody, async (req, res, next)=>{
         
         const authToken = jwt.sign(payload, JWT_SECRET, {expiresIn: "1hr"});
 
-        userEmail = email;
+        const userEmail = email;
 
         res.status(201).json({authToken, userEmail, userName});
 
@@ -173,10 +173,10 @@ router.post("/login", validateLoginBody, async (req, res, next)=>{
     }
 });
 
-validateUpdate = [
+const validateUpdate = [
     header("email").notEmpty().withMessage("Email required in the header")
     .isLength({max:55}).withMessage("Email is too long. 55 characters maximum allowed.")
-    .not().matches(/[<>&"'\/]/)
+    .not().matches(/[<>&"'/]/)
     .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
     .isEmail().withMessage("Must be a valid email.").normalizeEmail(),
 
@@ -199,8 +199,9 @@ validateUpdate = [
     }),
 
     //Only update first name 
+
     body("name").trim().notEmpty().withMessage("Firstname required").isString().withMessage("Name must be a valid string.")
-    .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"'\/]/)
+    .isLength({min:2, max:30}).withMessage("Name must be betweeen 3 and 30 charaters long.").not().matches(/[<>&"'/]/)
     .withMessage("Special characters like <, >, &, ', '', and / are not allowed")
     .matches(/^\p{L}+$/u).withMessage("Name must contain only letters"),
 ];
