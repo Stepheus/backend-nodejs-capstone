@@ -73,8 +73,8 @@ router.get('/', searchQueryValidator, async (req, res, next) => {
             query.condition = condition;
         };
         if (age_years) {
+            query.age_years = { $lte: age_years};
         };
-        query.age_years = { $lte: age_years};
 
         console.log("searching for items matching these values: \n", query);
 

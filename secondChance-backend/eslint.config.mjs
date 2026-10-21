@@ -3,6 +3,16 @@ import globals from "globals";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
+  {
+    ignores: [
+      "node_modules/",
+      "**/node_modules/",
+      ".env",
+      ".env.*",
+      "logs/",
+      "*.log"
+    ]
+  },
   { files: ["**/*.{js,mjs,cjs}"], 
     plugins: { js }, 
     extends: ["js/recommended"], 

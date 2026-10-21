@@ -20,7 +20,6 @@ const sharp = require("sharp");
 
 
 const logger = require('../logger');
-const { decode } = require('jsonwebtoken');
 
 
 
@@ -86,7 +85,7 @@ const validateBody = [
     .isIn(["Living","Kitchen","Office","Bedroom","Bathroom"])
     .withMessage("Invalid category selected.")
     .not().matches(/[<>&"'/]/)
-    .withMessage('Special characters like <, >, &, ", \, and / are not allowed'),
+    .withMessage('Special characters like <, >, &, ", and / are not allowed'),
 
     body("condition").trim().notEmpty()
     .isString().withMessage("Condition must be a string, and not empty.")
