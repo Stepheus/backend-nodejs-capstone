@@ -25,7 +25,7 @@ jobs:
           - name: Install & Lint Backend
             run: |
               cd secondChance-backend
-              npm ci
+              npm ci --legacy-peer-deps
               npm run lint
               echo "Backend codes linted successfully"
 
@@ -33,7 +33,7 @@ jobs:
           - name: Install & Lint Frontend
             run: |
               cd secondChance-frontend
-              npm ci
+              npm ci --legacy-peer-deps
               npm run lint
               echo "Frontend codes linted successfully"
 
