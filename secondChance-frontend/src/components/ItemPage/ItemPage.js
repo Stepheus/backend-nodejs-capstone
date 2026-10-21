@@ -84,7 +84,7 @@ function ItemPage() {
                             <label htmlFor="category">Category</label>
                             <select id="category" className="form-control my-1" onChange={(e) => setCategory(e.target.value)}>
 
-                                <option key="Living" value="Living">Living</option>
+                                <option key="Living" value="Living Room">Living Room</option>
                                 <option key="Bedroom" value="Bedroom">Bedroom</option>
                                 <option key="Bathroom" value="Bathroom">Bathroom</option>
                                 <option key="Kitchen" value="Kitchen">Kitchen</option>
