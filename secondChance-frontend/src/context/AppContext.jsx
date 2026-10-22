@@ -4,12 +4,11 @@ import PropTypes from 'prop-types';
 
 const AppContext = createContext(null);
 
-export const AppProvider = ({ children }) => {
+export function AppProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   
-  
-  return (
+  return(
     <AppContext.Provider value={{ isLoggedIn, setIsLoggedIn, userName, setUserName }}>
       {children}
     </AppContext.Provider>
