@@ -16,7 +16,7 @@ export function AppProvider({ children }) {
 };
 
 
-AppProvider.PropTypes = {
+AppProvider.propTypes = {
   children: PropTypes.node
 };
 

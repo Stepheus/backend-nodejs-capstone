@@ -13,13 +13,7 @@ const Profile = () => {
   const [editMode, setEditMode] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const authtoken = sessionStorage.getItem("auth-token");
-    if (!authtoken) {
-      navigate("/app/login");
-    }});
-
-  const fetchUserProfile = async () => {
+    const fetchUserProfile = async () => {
       try {
         const authtoken = sessionStorage.getItem("auth-token");
         const email = sessionStorage.getItem("email"); // Get the email from session storage
@@ -39,7 +33,16 @@ const Profile = () => {
         } 
   };
 
-  fetchUserProfile();
+  useEffect(() => {
+    const authtoken = sessionStorage.getItem("auth-token");
+    if (!authtoken) {
+      navigate("/app/login");
+    } else {
+      fetchUserProfile();
+    }
+  }, [navigate]);
+
+
 
   const handleEdit = () => {
   setEditMode(true);
