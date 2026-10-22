@@ -9,7 +9,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 import Navbar from './components/Navbar/Navbar';
 import Profile from './components/Profile/Profile';
-import { AppProvider } from './context/AppContext';
+import { AppProvider } from './context/AppProvider';
 
 function App() {
 
