@@ -1,25 +1,15 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import './Profile.css'
 import {urlConfig} from '../../config';
 import { useAppContext } from '../../context/AppContext';
 
 const Profile = () => {
+
   const [userDetails, setUserDetails] = useState({});
  const [updatedDetails, setUpdatedDetails] = useState({});
  const {setUserName} = useAppContext();
  const [changed, setChanged] = useState("");
-
- const [editMode, setEditMode] = useState(false);
-  const navigate = useNavigate();
-  useEffect(() => {
-    const authtoken = sessionStorage.getItem("auth-token");
-    if (!authtoken) {
-      navigate("/app/login");
-    } else {
-      fetchUserProfile();
-    }
-  }, [navigate]);
 
   const fetchUserProfile = async () => {
     try {
@@ -35,11 +25,25 @@ const Profile = () => {
                 setUserDetails(storedUserDetails);
                 setUpdatedDetails(storedUserDetails);
               }
-} catch (error) {
-  console.error(error);
-  // Handle error case
-}
-};
+    } catch (error) {
+    console.error(error);
+    // Handle error case
+      } 
+  };
+
+ 
+ const [editMode, setEditMode] = useState(false);
+  const navigate = useNavigate();
+  useEffect(() => {
+    const authtoken = sessionStorage.getItem("auth-token");
+    if (!authtoken) {
+      navigate("/app/login");
+    } else {
+      fetchUserProfile();
+    }
+  }, [navigate]);
+
+  
 
 const handleEdit = () => {
 setEditMode(true);
