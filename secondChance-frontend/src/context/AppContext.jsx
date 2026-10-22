@@ -21,4 +21,8 @@ AppProvider.PropTypes = {
   children: PropTypes.node
 };
 
-export const useAppContext = () => useContext(AppContext);
+export function useAppContext() {
+  const context =
+  useContext(AppContext);
+  return context;
+};
