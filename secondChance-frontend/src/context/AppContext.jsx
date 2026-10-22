@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import {useContext } from 'react';
 import PropTypes from 'prop-types';
-import {AppContext} from "./AppProvider";
+import {AppProvider} from "./AppProvider";
 
 AppProvider.PropTypes = {
   children: PropTypes.node
