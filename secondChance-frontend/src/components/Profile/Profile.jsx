@@ -6,41 +6,50 @@ import { useAppContext } from '../../context/AppContext';
 
 const Profile = () => {
 
-  const [userDetails, setUserDetails] = useState({});
- const [updatedDetails, setUpdatedDetails] = useState({});
+    const navigate = useNavigate();
+
+
+    useEffect(() => {
+    const authtoken = sessionStorage.getItem("auth-token");
+    const email = sessionStorage.getItem("email"); // Get the email from session storage
+    const name=sessionStorage.getItem('name');
+    if (!authtoken || !name || !email) {
+      navigate("/app/login");
+    }
+  }, [navigate]);
+
+  const email = sessionStorage.getItem("email"); // Get the email from session storage
+  const name =sessionStorage.getItem('name');
+
+  const [userDetails, setUserDetails] = useState({name, email});
+ const [updatedDetails, setUpdatedDetails] = useState({name, email});
  const {setUserName} = useAppContext();
  const [changed, setChanged] = useState("");
   const [editMode, setEditMode] = useState(false);
-  const navigate = useNavigate();
 
-    const fetchUserProfile = async () => {
-      try {
-        const authtoken = sessionStorage.getItem("auth-token");
-        const email = sessionStorage.getItem("email"); // Get the email from session storage
-        const name=sessionStorage.getItem('name');
-        if (name || authtoken) {
-                  const storedUserDetails = {
-                    name: name,
-                    email:email
-                  };
+
+
+  //   const fetchUserProfile = async () => {
+  //     try {
+  //       const authtoken = sessionStorage.getItem("auth-token");
+  //       const email = sessionStorage.getItem("email"); // Get the email from session storage
+  //       const name=sessionStorage.getItem('name');
+  //       if (name || authtoken) {
+  //                 const storedUserDetails = {
+  //                   name: name,
+  //                   email:email
+  //                 };
           
-                  setUserDetails(storedUserDetails);
-                  setUpdatedDetails(storedUserDetails);
-                }
-      } catch (error) {
-      console.error(error);
-      // Handle error case
-        } 
-  };
+  //                 setUserDetails(storedUserDetails);
+  //                 setUpdatedDetails(storedUserDetails);
+  //               }
+  //     } catch (error) {
+  //     console.error(error);
+  //     // Handle error case
+  //       } 
+  // };
 
-  useEffect(() => {
-    const authtoken = sessionStorage.getItem("auth-token");
-    if (!authtoken) {
-      navigate("/app/login");
-    } else {
-      fetchUserProfile();
-    }
-  }, [navigate]);
+
 
 
 
